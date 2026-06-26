@@ -143,6 +143,7 @@
   .correction-item{background:var(--mark-red-bg);border-left:3px solid var(--mark-red);color:var(--ink);}
   .correction-item .orig{color:var(--mark-red);text-decoration:line-through;}
   .suggestion-item{background:var(--stamp-teal-bg);border-left:3px solid var(--stamp-teal);color:var(--ink);}
+  .suggestion-item b{color:var(--stamp-teal);}
 
   .disclaimer{font-size:.78rem;color:var(--ink-faint);text-align:center;margin-top:.5rem;}
   footer.note{text-align:center;font-size:.78rem;color:var(--ink-faint);margin-top:2rem;}
@@ -444,7 +445,7 @@ function renderResults(data) {
     data.suggestions.forEach(s => {
       const d = document.createElement("div");
       d.className = "suggestion-item";
-      d.textContent = s;
+      d.innerHTML = s.criterionName ? `<b>${s.criterionName}</b> — ${s.tip}` : s.tip;
       suggestionsList.appendChild(d);
     });
   } else { suggestionsBlock.style.display = "none"; }
