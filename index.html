@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exam Prep — Writing &amp; Speaking Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAF7F1;
+    --paper-line:#E7E0D3;
+    --ink:#22283B;
+    --ink-soft:#5B6178;
+    --ink-faint:#8A8F9F;
+    --mark-red:#C84B31;
+    --mark-red-bg:#FBEDE8;
+    --stamp-teal:#1F6F6B;
+    --stamp-teal-bg:#E7F1EF;
+    --seal-gold:#B9852E;
+    --seal-gold-bg:#F7EEDC;
+    --card:#FFFFFF;
+    --radius:14px;
+    --shadow:0 2px 10px rgba(34,40,59,0.06), 0 1px 2px rgba(34,40,59,0.05);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    padding:2rem 1rem 4rem;
+  }
+  .shell{max-width:760px;margin:0 auto;}
+  h1,h2,h3{font-family:'Lora',serif;font-weight:600;color:var(--ink);margin:0;}
+  header.top{text-align:center;margin-bottom:1.75rem;}
+  header.top h1{font-size:1.9rem;letter-spacing:-0.01em;}
+  header.top p{color:var(--ink-soft);margin:.35rem 0 0;font-size:.95rem;}
+
+  .tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:1.5rem;}
+  .tab{
+    border:1px solid var(--paper-line);
+    background:var(--card);
+    color:var(--ink-soft);
+    padding:.55rem 1.2rem;
+    border-radius:999px;
+    font-size:.92rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:all .15s;
+  }
+  .tab.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--paper-line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:1.5rem;
+    margin-bottom:1.25rem;
+  }
+
+  label{display:block;font-size:.82rem;font-weight:600;color:var(--ink-soft);margin-bottom:.35rem;}
+  .hint{font-size:.78rem;color:var(--ink-faint);margin-top:.3rem;}
+  input[type=text],select,textarea{
+    width:100%;
+    padding:.7rem .8rem;
+    border:1px solid var(--paper-line);
+    border-radius:10px;
+    font-size:.97rem;
+    font-family:inherit;
+    background:#fff;
+    color:var(--ink);
+  }
+  input[type=text]:focus,select:focus,textarea:focus{outline:2px solid var(--stamp-teal);outline-offset:1px;border-color:var(--stamp-teal);}
+  textarea{min-height:170px;resize:vertical;line-height:1.55;}
+
+  .row{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;}
+  .row > div{flex:1;min-width:160px;}
+
+  .pillgroup{display:flex;gap:.5rem;}
+  .pill{
+    flex:1;text-align:center;
+    border:1px solid var(--paper-line);
+    background:#fff;color:var(--ink-soft);
+    padding:.55rem .5rem;border-radius:10px;
+    font-size:.9rem;font-weight:600;cursor:pointer;
+  }
+  .pill.active{background:var(--stamp-teal-bg);color:var(--stamp-teal);border-color:var(--stamp-teal);}
+
+  .task-meta{display:flex;gap:.75rem;flex-wrap:wrap;font-size:.8rem;color:var(--ink-soft);margin-top:.6rem;}
+  .task-meta span{background:var(--paper);border:1px solid var(--paper-line);border-radius:8px;padding:.25rem .55rem;}
+  .image-note{
+    margin-top:.6rem;font-size:.8rem;color:var(--mark-red);
+    background:var(--mark-red-bg);border-radius:8px;padding:.5rem .7rem;
+  }
+
+  button.primary{
+    width:100%;background:var(--stamp-teal);color:#fff;border:none;
+    padding:.85rem 1rem;border-radius:10px;font-size:1rem;font-weight:600;
+    cursor:pointer;transition:background .15s;
+  }
+  button.primary:hover{background:#185855;}
+  button.primary:disabled{opacity:.55;cursor:not-allowed;}
+  button.secondary{
+    width:100%;background:#fff;color:var(--ink);border:1px solid var(--paper-line);
+    padding:.75rem 1rem;border-radius:10px;font-size:.95rem;font-weight:600;cursor:pointer;
+  }
+
+  .wordcount{display:flex;justify-content:flex-end;font-size:.78rem;color:var(--ink-faint);margin:-.4rem 0 .75rem;}
+
+  .loading{display:none;text-align:center;padding:1.25rem;color:var(--ink-soft);font-size:.9rem;}
+  .loading.visible{display:block;}
+  .spinner{
+    width:26px;height:26px;margin:0 auto .6rem;border-radius:50%;
+    border:3px solid var(--paper-line);border-top-color:var(--stamp-teal);
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .task-card{
+    border:1px dashed var(--paper-line);border-radius:10px;padding:1rem 1.1rem;
+    background:var(--paper);margin-bottom:1rem;
+  }
+  .task-card h3{font-size:1.02rem;margin-bottom:.4rem;}
+  .task-card .content{font-size:.96rem;line-height:1.55;color:var(--ink);}
+  .task-card .instructions{font-size:.82rem;color:var(--ink-soft);margin-top:.5rem;font-style:italic;}
+
+  #results{display:none;}
+  #results.visible{display:block;}
+
+  .stamp-wrap{display:flex;justify-content:center;margin-bottom:1.5rem;}
+  .stamp{
+    width:130px;height:130px;border-radius:50%;
+    border:3px double var(--seal-gold);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transform:rotate(-5deg);
+    background:var(--seal-gold-bg);color:var(--seal-gold);
+    font-family:'Lora',serif;
+  }
+  .stamp .num{font-size:2.1rem;font-weight:700;line-height:1;}
+  .stamp .max{font-size:.78rem;font-weight:600;margin-top:.15rem;}
+
+  .crit{margin-bottom:.7rem;}
+  .crit-label{display:flex;justify-content:space-between;font-size:.85rem;color:var(--ink-soft);margin-bottom:.25rem;}
+  .crit-label b{color:var(--ink);font-weight:600;}
+  .bar-track{height:8px;background:var(--paper-line);border-radius:6px;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--stamp-teal);border-radius:6px;}
+
+  .feedback-block{margin-top:1.25rem;}
+  .feedback-block h4{font-size:.85rem;color:var(--ink-soft);margin-bottom:.5rem;font-family:inherit;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+  .correction-item, .suggestion-item{
+    border-radius:8px;padding:.55rem .75rem;margin-bottom:.45rem;font-size:.92rem;
+  }
+  .correction-item{background:var(--mark-red-bg);border-left:3px solid var(--mark-red);color:var(--ink);}
+  .correction-item .orig{color:var(--mark-red);text-decoration:line-through;}
+  .suggestion-item{background:var(--stamp-teal-bg);border-left:3px solid var(--stamp-teal);color:var(--ink);}
+
+  .disclaimer{font-size:.78rem;color:var(--ink-faint);text-align:center;margin-top:.5rem;}
+  footer.note{text-align:center;font-size:.78rem;color:var(--ink-faint);margin-top:2rem;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="top">
+    <h1>Exam Prep</h1>
+    <p>Writing &amp; speaking practice, graded against real exam criteria</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" id="tabGrade" type="button">Grade my work</button>
+    <button class="tab" id="tabPractice" type="button">Practice tasks</button>
+  </div>
+
+  <section class="card">
+    <div class="row">
+      <div>
+        <label for="studentCode">Your code</label>
+        <input type="text" id="studentCode" placeholder="e.g. FX7-K2N">
+        <p class="hint">Ask your teacher for the code they assigned you.</p>
+      </div>
+      <div>
+        <label for="examSelect">Exam</label>
+        <select id="examSelect"></select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Skill</label>
+        <div class="pillgroup">
+          <button type="button" class="pill active" data-skill="writing">Writing</button>
+          <button type="button" class="pill" data-skill="speaking">Speaking</button>
+        </div>
+      </div>
+      <div>
+        <label for="taskSelect">Task</label>
+        <select id="taskSelect"></select>
+      </div>
+    </div>
+    <div class="task-meta" id="taskMeta"></div>
+  </section>
+
+  <section class="card" id="gradeSection">
+    <label for="essayText">Your response</label>
+    <textarea id="essayText" placeholder="Write or paste your response here..."></textarea>
+    <div class="wordcount"><span id="wordCount">0 words</span></div>
+    <button class="primary" id="gradeBtn">Grade my work</button>
+  </section>
+
+  <section class="card" id="practiceSection" style="display:none">
+    <button class="secondary" id="generateBtn">Generate a new task</button>
+    <div id="taskCardWrap" style="margin-top:1rem"></div>
+    <div id="practiceResponseWrap" style="display:none;margin-top:1rem">
+      <label for="practiceText">Your response (optional — write it out, then grade it)</label>
+      <textarea id="practiceText" placeholder="Write your response to the generated task..."></textarea>
+      <div class="wordcount"><span id="practiceWordCount">0 words</span></div>
+      <button class="primary" id="gradePracticeBtn">Grade this response</button>
+    </div>
+  </section>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <span id="loadingText">Working on it...</span>
+  </div>
+
+  <section class="card" id="results">
+    <div class="stamp-wrap">
+      <div class="stamp">
+        <div class="num" id="stampNum">-</div>
+        <div class="max" id="stampMax">/ -</div>
+      </div>
+    </div>
+    <div id="criteriaList"></div>
+    <p class="disclaimer" id="disclaimer"></p>
+    <div class="feedback-block" id="correctionsBlock" style="display:none">
+      <h4>Corrections</h4>
+      <div id="correctionsList"></div>
+    </div>
+    <div class="feedback-block" id="suggestionsBlock" style="display:none">
+      <h4>Suggestions</h4>
+      <div id="suggestionsList"></div>
+    </div>
+  </section>
+
+  <footer class="note">Graded by AI against exam-specific criteria — use it for practice, not as an official score.</footer>
+</div>
+
+<script>
+// *** UPDATE THIS after deploying the Worker (see README) ***
+const BACKEND_URL = "https://exam-scorer.kayuso2011.workers.dev/";
+
+const EXAM_GROUPS = [
+  { label: "International", exams: ["ielts", "toefl", "det"] },
+  { label: "Cambridge", exams: ["fce", "cae", "cpe", "pet", "ket"] },
+  { label: "Russian state exams", exams: ["oge", "ege"] }
+];
+// Local fallback labels in case /exams hasn't loaded yet (e.g. cold start).
+const FALLBACK_LABELS = {
+  ielts: "IELTS", toefl: "TOEFL iBT", det: "Duolingo English Test",
+  fce: "Cambridge FCE (B2 First)", cae: "Cambridge CAE (C1 Advanced)", cpe: "Cambridge CPE (C2 Proficiency)",
+  pet: "Cambridge PET (B1 Preliminary)", ket: "Cambridge KET (A2 Key)",
+  oge: "ОГЭ (Russian state, grade 9)", ege: "ЕГЭ (Russian state, grade 11)"
+};
+
+let currentSkill = "writing";
+let currentMode = "grade";
+let currentGeneratedTask = null;
+
+const examSelect = document.getElementById("examSelect");
+const taskSelect = document.getElementById("taskSelect");
+const taskMeta = document.getElementById("taskMeta");
+const studentCodeInput = document.getElementById("studentCode");
+
+studentCodeInput.value = localStorage.getItem("examPrepStudentCode") || "";
+studentCodeInput.addEventListener("change", () => {
+  localStorage.setItem("examPrepStudentCode", studentCodeInput.value.trim());
+});
+
+function populateExamSelect(labels) {
+  examSelect.innerHTML = "";
+  EXAM_GROUPS.forEach(group => {
+    const og = document.createElement("optgroup");
+    og.label = group.label;
+    group.exams.forEach(key => {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = labels[key] || key;
+      og.appendChild(opt);
+    });
+    examSelect.appendChild(og);
+  });
+}
+
+async function loadExams() {
+  populateExamSelect(FALLBACK_LABELS);
+  try {
+    const res = await fetch(`${BACKEND_URL}/exams`);
+    const data = await res.json();
+    if (data.exams) populateExamSelect(data.exams);
+  } catch (e) { /* fallback labels already shown */ }
+  await loadTasks();
+}
+
+async function loadTasks() {
+  taskSelect.innerHTML = "<option>Loading...</option>";
+  taskMeta.innerHTML = "";
+  try {
+    const res = await fetch(`${BACKEND_URL}/tasks?exam=${examSelect.value}&skill=${currentSkill}`);
+    const data = await res.json();
+    taskSelect.innerHTML = "";
+    (data.tasks || []).forEach(t => {
+      const opt = document.createElement("option");
+      opt.value = t.id;
+      opt.textContent = t.title;
+      opt.dataset.meta = JSON.stringify(t);
+      taskSelect.appendChild(opt);
+    });
+    showTaskMeta();
+  } catch (e) {
+    taskSelect.innerHTML = "<option value=''>Couldn't load tasks — check BACKEND_URL</option>";
+  }
+}
+
+function showTaskMeta() {
+  const opt = taskSelect.options[taskSelect.selectedIndex];
+  if (!opt || !opt.dataset.meta) { taskMeta.innerHTML = ""; return; }
+  const t = JSON.parse(opt.dataset.meta);
+  let html = "";
+  if (t.wordLimit) html += `<span>~${t.wordLimit} words</span>`;
+  if (t.timeLimit) html += `<span>${t.timeLimit} min</span>`;
+  taskMeta.innerHTML = html;
+  if (t.requiresImage) {
+    taskMeta.innerHTML += `<div class="image-note" style="width:100%">This task normally includes a photo. For now the prompt describes the scene in words instead.</div>`;
+  }
+}
+
+examSelect.addEventListener("change", loadTasks);
+taskSelect.addEventListener("change", showTaskMeta);
+
+document.querySelectorAll(".pill").forEach(p => {
+  p.addEventListener("click", () => {
+    document.querySelectorAll(".pill").forEach(x => x.classList.remove("active"));
+    p.classList.add("active");
+    currentSkill = p.dataset.skill;
+    loadTasks();
+  });
+});
+
+document.getElementById("tabGrade").addEventListener("click", () => switchMode("grade"));
+document.getElementById("tabPractice").addEventListener("click", () => switchMode("practice"));
+
+function switchMode(mode) {
+  currentMode = mode;
+  document.getElementById("tabGrade").classList.toggle("active", mode === "grade");
+  document.getElementById("tabPractice").classList.toggle("active", mode === "practice");
+  document.getElementById("gradeSection").style.display = mode === "grade" ? "" : "none";
+  document.getElementById("practiceSection").style.display = mode === "practice" ? "" : "none";
+  document.getElementById("results").classList.remove("visible");
+}
+
+function wireWordCount(textareaId, countId) {
+  const ta = document.getElementById(textareaId);
+  const out = document.getElementById(countId);
+  ta.addEventListener("input", () => {
+    const words = ta.value.trim().split(/\s+/).filter(Boolean).length;
+    out.textContent = `${words} word${words === 1 ? "" : "s"}`;
+  });
+}
+wireWordCount("essayText", "wordCount");
+wireWordCount("practiceText", "practiceWordCount");
+
+function setLoading(on, text) {
+  document.getElementById("loading").classList.toggle("visible", on);
+  if (text) document.getElementById("loadingText").textContent = text;
+}
+
+async function generateTask() {
+  const code = studentCodeInput.value.trim();
+  setLoading(true, "Generating a fresh task...");
+  document.getElementById("generateBtn").disabled = true;
+  try {
+    const res = await fetch(`${BACKEND_URL}/generate-task`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ examKey: examSelect.value, skill: currentSkill, taskId: taskSelect.value, studentCode: code || undefined })
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    currentGeneratedTask = data;
+    renderTaskCard(data);
+    document.getElementById("practiceResponseWrap").style.display = "";
+  } catch (e) {
+    alert("Couldn't generate a task: " + e.message);
+  } finally {
+    setLoading(false);
+    document.getElementById("generateBtn").disabled = false;
+  }
+}
+
+function renderTaskCard(t) {
+  const wrap = document.getElementById("taskCardWrap");
+  wrap.innerHTML = `
+    <div class="task-card">
+      <h3>${t.title}</h3>
+      <div class="content">${t.content}</div>
+      <div class="instructions">${t.instructions}</div>
+      <div class="task-meta">
+        ${t.wordLimit ? `<span>~${t.wordLimit} words</span>` : ""}
+        ${t.timeLimit ? `<span>${t.timeLimit} min</span>` : ""}
+      </div>
+      ${t.requiresImage ? `<div class="image-note">This task normally includes a photo — described in words for now.</div>` : ""}
+    </div>`;
+}
+
+async function gradeSubmission(text) {
+  const code = studentCodeInput.value.trim();
+  if (!code) { alert("Enter your student code first."); return; }
+  if (!text.trim()) { alert("Write something first."); return; }
+
+  setLoading(true, "Grading your response...");
+  try {
+    const res = await fetch(`${BACKEND_URL}/grade`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentCode: code,
+        examKey: examSelect.value,
+        skill: currentSkill,
+        taskId: taskSelect.value,
+        text
+      })
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    renderResults(data);
+  } catch (e) {
+    alert("Couldn't grade that: " + e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderResults(data) {
+  document.getElementById("stampNum").textContent = data.total;
+  document.getElementById("stampMax").textContent = `/ ${data.maxTotal}`;
+
+  const list = document.getElementById("criteriaList");
+  list.innerHTML = "";
+  data.criteriaInfo.forEach(c => {
+    const score = data.scores[c.key];
+    const pct = score != null ? Math.min(100, (score / c.max) * 100) : 0;
+    const row = document.createElement("div");
+    row.className = "crit";
+    row.innerHTML = `
+      <div class="crit-label"><span>${c.name}</span><b>${score != null ? score : "—"} / ${c.max}</b></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>`;
+    list.appendChild(row);
+  });
+
+  document.getElementById("disclaimer").textContent =
+    data.examKey === "det" ? "Practice estimate — not an official Duoligo English Test score." :
+    (data.examKey === "oge" || data.examKey === "ege") ? "Placeholder rubric weights — ask your teacher to confirm against this year's FIPI criteria." : "";
+
+  const correctionsBlock = document.getElementById("correctionsBlock");
+  const correctionsList = document.getElementById("correctionsList");
+  correctionsList.innerHTML = "";
+  if (data.errors && data.errors.length) {
+    correctionsBlock.style.display = "";
+    data.errors.forEach(e => {
+      const d = document.createElement("div");
+      d.className = "correction-item";
+      d.innerHTML = `<span class="orig">${e.original}</span> → ${e.correction}`;
+      correctionsList.appendChild(d);
+    });
+  } else { correctionsBlock.style.display = "none"; }
+
+  const suggestionsBlock = document.getElementById("suggestionsBlock");
+  const suggestionsList = document.getElementById("suggestionsList");
+  suggestionsList.innerHTML = "";
+  if (data.suggestions && data.suggestions.length) {
+    suggestionsBlock.style.display = "";
+    data.suggestions.forEach(s => {
+      const d = document.createElement("div");
+      d.className = "suggestion-item";
+      d.textContent = s;
+      suggestionsList.appendChild(d);
+    });
+  } else { suggestionsBlock.style.display = "none"; }
+
+  document.getElementById("results").classList.add("visible");
+  document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+document.getElementById("gradeBtn").addEventListener("click", () => gradeSubmission(document.getElementById("essayText").value));
+document.getElementById("generateBtn").addEventListener("click", generateTask);
+document.getElementById("gradePracticeBtn").addEventListener("click", () => gradeSubmission(document.getElementById("practiceText").value));
+
+loadExams();
+</script>
+</body>
+</html>
