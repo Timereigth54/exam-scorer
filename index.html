@@ -39,20 +39,6 @@
   header.top h1{font-size:1.9rem;letter-spacing:-0.01em;}
   header.top p{color:var(--ink-soft);margin:.35rem 0 0;font-size:.95rem;}
 
-  .tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:1.5rem;}
-  .tab{
-    border:1px solid var(--paper-line);
-    background:var(--card);
-    color:var(--ink-soft);
-    padding:.55rem 1.2rem;
-    border-radius:999px;
-    font-size:.92rem;
-    font-weight:600;
-    cursor:pointer;
-    transition:all .15s;
-  }
-  .tab.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
-
   .card{
     background:var(--card);
     border:1px solid var(--paper-line);
@@ -170,11 +156,6 @@
     <p>Writing &amp; speaking practice, graded against real exam criteria</p>
   </header>
 
-  <div class="tabs">
-    <button class="tab active" id="tabGrade" type="button">Grade my work</button>
-    <button class="tab" id="tabPractice" type="button">Practice tasks</button>
-  </div>
-
   <section class="card">
     <div class="row">
       <div>
@@ -203,23 +184,16 @@
     <div class="task-meta" id="taskMeta"></div>
   </section>
 
-  <section class="card" id="gradeSection">
-    <label for="essayText">Your response</label>
-    <textarea id="essayText" placeholder="Write or paste your response here..."></textarea>
+  <section class="card" id="workspaceSection">
+    <button class="secondary" id="generateBtn">Generate a practice prompt for this task</button>
+    <div id="taskCardWrap" style="margin-top:1rem"></div>
+
+    <label for="essayText" style="margin-top:1rem">Your response</label>
+    <textarea id="essayText" placeholder="Write or paste your response here — generate a prompt above first if you want one, or bring your own."></textarea>
     <div class="wordcount"><span id="wordCount">0 words</span></div>
     <button class="primary" id="gradeBtn">Grade my work</button>
   </section>
 
-  <section class="card" id="practiceSection" style="display:none">
-    <button class="secondary" id="generateBtn">Generate a new task</button>
-    <div id="taskCardWrap" style="margin-top:1rem"></div>
-    <div id="practiceResponseWrap" style="display:none;margin-top:1rem">
-      <label for="practiceText">Your response (optional — write it out, then grade it)</label>
-      <textarea id="practiceText" placeholder="Write your response to the generated task..."></textarea>
-      <div class="wordcount"><span id="practiceWordCount">0 words</span></div>
-      <button class="primary" id="gradePracticeBtn">Grade this response</button>
-    </div>
-  </section>
 
   <div class="loading" id="loading">
     <div class="spinner"></div>
@@ -250,7 +224,7 @@
 
 <script>
 // *** UPDATE THIS after deploying the Worker (see README) — trailing slash is fine, it gets stripped automatically ***
-const BACKEND_URL = "https://exam-scorer.kayuso2011.workers.dev/".replace(/\/+$/, "");
+const BACKEND_URL = "https://YOUR-WORKER-SUBDOMAIN.workers.dev".replace(/\/+$/, "");
 
 const EXAM_GROUPS = [
   { label: "International", exams: ["ielts", "toefl", "det"] },
@@ -266,7 +240,6 @@ const FALLBACK_LABELS = {
 };
 
 let currentSkill = "writing";
-let currentMode = "grade";
 let currentGeneratedTask = null;
 
 const examSelect = document.getElementById("examSelect");
@@ -349,18 +322,6 @@ document.querySelectorAll(".pill").forEach(p => {
   });
 });
 
-document.getElementById("tabGrade").addEventListener("click", () => switchMode("grade"));
-document.getElementById("tabPractice").addEventListener("click", () => switchMode("practice"));
-
-function switchMode(mode) {
-  currentMode = mode;
-  document.getElementById("tabGrade").classList.toggle("active", mode === "grade");
-  document.getElementById("tabPractice").classList.toggle("active", mode === "practice");
-  document.getElementById("gradeSection").style.display = mode === "grade" ? "" : "none";
-  document.getElementById("practiceSection").style.display = mode === "practice" ? "" : "none";
-  document.getElementById("results").classList.remove("visible");
-}
-
 function wireWordCount(textareaId, countId) {
   const ta = document.getElementById(textareaId);
   const out = document.getElementById(countId);
@@ -370,7 +331,6 @@ function wireWordCount(textareaId, countId) {
   });
 }
 wireWordCount("essayText", "wordCount");
-wireWordCount("practiceText", "practiceWordCount");
 
 function setLoading(on, text) {
   document.getElementById("loading").classList.toggle("visible", on);
@@ -391,7 +351,6 @@ async function generateTask() {
     if (data.error) { alert(data.error); return; }
     currentGeneratedTask = data;
     renderTaskCard(data);
-    document.getElementById("practiceResponseWrap").style.display = "";
   } catch (e) {
     alert("Couldn't generate a task: " + e.message);
   } finally {
@@ -496,7 +455,6 @@ function renderResults(data) {
 
 document.getElementById("gradeBtn").addEventListener("click", () => gradeSubmission(document.getElementById("essayText").value));
 document.getElementById("generateBtn").addEventListener("click", generateTask);
-document.getElementById("gradePracticeBtn").addEventListener("click", () => gradeSubmission(document.getElementById("practiceText").value));
 
 loadExams();
 </script>
