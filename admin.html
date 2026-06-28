@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exam Prep — Roster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAF7F1;--paper-line:#E7E0D3;--ink:#22283B;--ink-soft:#5B6178;--ink-faint:#8A8F9F;
+    --stamp-teal:#1F6F6B;--stamp-teal-bg:#E7F1EF;--seal-gold:#B9852E;--card:#fff;--radius:14px;
+    --shadow:0 2px 10px rgba(34,40,59,0.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:2rem 1rem 4rem;}
+  .shell{max-width:880px;margin:0 auto;}
+  h1{font-family:'Lora',serif;font-size:1.7rem;margin:0 0 .25rem;}
+  p.sub{color:var(--ink-soft);margin:0 0 1.5rem;font-size:.92rem;}
+  .card{background:var(--card);border:1px solid var(--paper-line);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.5rem;margin-bottom:1.25rem;}
+  label{display:block;font-size:.82rem;font-weight:600;color:var(--ink-soft);margin-bottom:.35rem;}
+  input[type=text],input[type=password]{width:100%;padding:.65rem .8rem;border:1px solid var(--paper-line);border-radius:10px;font-size:.95rem;font-family:inherit;}
+  .row{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;}
+  .row>div{flex:1;min-width:160px;}
+  button{background:var(--stamp-teal);color:#fff;border:none;padding:.65rem 1.1rem;border-radius:10px;font-weight:600;cursor:pointer;font-size:.92rem;}
+  button.ghost{background:#fff;color:var(--ink);border:1px solid var(--paper-line);}
+  table{width:100%;border-collapse:collapse;font-size:.9rem;}
+  th{text-align:left;color:var(--ink-soft);font-size:.78rem;text-transform:uppercase;letter-spacing:.03em;padding:.4rem .5rem;border-bottom:1px solid var(--paper-line);}
+  td{padding:.55rem .5rem;border-bottom:1px solid var(--paper-line);}
+  tr.student-row{cursor:pointer;}
+  tr.student-row:hover{background:var(--stamp-teal-bg);}
+  .code{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:600;background:var(--paper);padding:.15rem .4rem;border-radius:6px;}
+  .reset-images-btn{background:none;border:none;color:var(--stamp-teal);font-size:.75rem;text-decoration:underline;cursor:pointer;margin-left:.4rem;padding:0;}
+  .new-code{font-size:1.4rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;color:var(--seal-gold);text-align:center;padding:.75rem;background:#F7EEDC;border-radius:10px;margin-top:.75rem;display:none;}
+  #gate{max-width:380px;margin:4rem auto 0;}
+  #app{display:none;}
+  .history{display:none;margin-top:.5rem;}
+  .history.visible{display:block;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div id="gate" class="card">
+    <h1>Exam Prep — Roster</h1>
+    <p class="sub">Teacher access only.</p>
+    <label for="adminKeyInput">Admin key</label>
+    <input type="password" id="adminKeyInput" placeholder="Enter your admin key">
+    <button style="width:100%;margin-top:.75rem" id="unlockBtn">Unlock</button>
+  </div>
+
+  <div id="app">
+    <h1>Roster &amp; gradebook</h1>
+    <p class="sub">Create student codes and review submission history.</p>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label for="newName">Student name</label>
+          <input type="text" id="newName" placeholder="e.g. Amina Okafor">
+        </div>
+        <div>
+          <label for="newCohort">Cohort (optional)</label>
+          <input type="text" id="newCohort" placeholder="e.g. IELTS evening group">
+        </div>
+      </div>
+      <button id="addBtn">Create student code</button>
+      <div class="new-code" id="newCode"></div>
+    </div>
+
+    <div class="card">
+      <table id="rosterTable">
+        <thead><tr><th>Name</th><th>Code</th><th>Cohort</th><th>Submissions</th><th>Images</th><th>Last activity</th></tr></thead>
+        <tbody id="rosterBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card history" id="historyCard">
+      <h3 id="historyTitle" style="font-family:'Lora',serif"></h3>
+      <table>
+        <thead><tr><th>Date</th><th>Exam</th><th>Skill</th><th>Task</th><th>Score</th></tr></thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// *** Same Worker URL as index.html — trailing slash is fine, it gets stripped automatically ***
+const BACKEND_URL = "https://exam-scorer.kayuso2011.workers.dev/".replace(/\/+$/, "");
+let adminKey = sessionStorage.getItem("examPrepAdminKey") || "";
+
+function authHeaders() { return { "X-Admin-Key": adminKey, "Content-Type": "application/json" }; }
+
+async function unlock() {
+  adminKey = document.getElementById("adminKeyInput").value.trim();
+  if (!adminKey) { alert("Enter your admin key first."); return; }
+  try {
+    const res = await fetch(`${BACKEND_URL}/admin/students`, { headers: authHeaders() });
+    if (!res.ok) { alert(res.status === 401 ? "That key didn't work." : `Server returned an error (${res.status}).`); return; }
+    sessionStorage.setItem("examPrepAdminKey", adminKey);
+    document.getElementById("gate").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    loadRoster();
+  } catch (e) {
+    alert("Couldn't reach the server: " + e.message + "\n\nCheck that BACKEND_URL near the top of this file's <script> is set to your actual Worker URL, not the placeholder.");
+  }
+}
+document.getElementById("unlockBtn").addEventListener("click", unlock);
+
+if (adminKey) {
+  document.getElementById("gate").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  loadRoster();
+}
+
+async function loadRoster() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/admin/students`, { headers: authHeaders() });
+    if (!res.ok) { alert(`Couldn't load roster (server returned ${res.status}).`); return; }
+    const data = await res.json();
+    const body = document.getElementById("rosterBody");
+    body.innerHTML = "";
+    (data.students || []).forEach(s => {
+      const tr = document.createElement("tr");
+      tr.className = "student-row";
+      tr.innerHTML = `<td>${s.name}</td><td><span class="code">${s.code}</span></td><td>${s.cohort || "—"}</td><td>${s.submission_count}</td><td>${s.images_used}/10 <button type="button" class="reset-images-btn" data-code="${s.code}">reset</button></td><td>${s.last_submission ? new Date(s.last_submission).toLocaleDateString() : "—"}</td>`;
+      tr.addEventListener("click", () => loadHistory(s.code, s.name));
+      tr.querySelector(".reset-images-btn").addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!confirm(`Reset ${s.name}'s image upload count back to 0?`)) return;
+        try {
+          const res = await fetch(`${BACKEND_URL}/admin/students/${encodeURIComponent(s.code)}/reset-images`, { method: "POST", headers: authHeaders() });
+          if (!res.ok) { alert("Couldn't reset that — try again."); return; }
+          loadRoster();
+        } catch (err) {
+          alert("Couldn't reach the server: " + err.message);
+        }
+      });
+      body.appendChild(tr);
+    });
+  } catch (e) {
+    alert("Couldn't reach the server to load the roster: " + e.message);
+  }
+}
+
+async function loadHistory(code, name) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/admin/students/${encodeURIComponent(code)}`, { headers: authHeaders() });
+    if (!res.ok) { alert(`Couldn't load history (server returned ${res.status}).`); return; }
+    const data = await res.json();
+    document.getElementById("historyTitle").textContent = `${name} — ${code}`;
+    const body = document.getElementById("historyBody");
+    body.innerHTML = "";
+    (data.submissions || []).forEach(s => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${new Date(s.created_at).toLocaleDateString()}</td><td>${s.exam_key}</td><td>${s.skill}</td><td>${s.task_id || "—"}</td><td>${s.total_score ?? "—"}</td>`;
+      body.appendChild(tr);
+    });
+    document.getElementById("historyCard").classList.add("visible");
+    document.getElementById("historyCard").scrollIntoView({ behavior: "smooth" });
+  } catch (e) {
+    alert("Couldn't reach the server to load history: " + e.message);
+  }
+}
+
+document.getElementById("addBtn").addEventListener("click", async () => {
+  const name = document.getElementById("newName").value.trim();
+  if (!name) { alert("Enter a name first."); return; }
+  const cohort = document.getElementById("newCohort").value.trim();
+  try {
+    const res = await fetch(`${BACKEND_URL}/admin/students`, {
+      method: "POST", headers: authHeaders(),
+      body: JSON.stringify({ name, cohort: cohort || undefined })
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    const box = document.getElementById("newCode");
+    box.style.display = "block";
+    box.textContent = `${data.name}: ${data.code}`;
+    document.getElementById("newName").value = "";
+    document.getElementById("newCohort").value = "";
+    loadRoster();
+  } catch (e) {
+    alert("Couldn't reach the server to create the student: " + e.message);
+  }
+});
+</script>
+</body>
+</html>

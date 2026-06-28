@@ -75,6 +75,23 @@
     font-size:.9rem;font-weight:600;cursor:pointer;
   }
   .pill.active{background:var(--stamp-teal-bg);color:var(--stamp-teal);border-color:var(--stamp-teal);}
+  .pill.disabled{opacity:.55;cursor:not-allowed;display:flex;align-items:center;justify-content:center;gap:.35rem;}
+  .soon-badge{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;background:var(--ink-faint);color:#fff;border-radius:5px;padding:.1rem .35rem;}
+  .prompt-box{min-height:90px;background:var(--paper);font-style:italic;}
+  input[type=file]{
+    width:100%;padding:.6rem;border:1px dashed var(--paper-line);border-radius:10px;
+    font-size:.88rem;background:var(--paper);font-family:inherit;
+  }
+  #imagePreviewWrap{margin-top:.6rem;display:flex;align-items:center;gap:.75rem;}
+  #imagePreview{max-width:140px;max-height:140px;border-radius:8px;border:1px solid var(--paper-line);}
+  .timer-row{display:flex;align-items:center;gap:1rem;margin-top:1rem;flex-wrap:wrap;}
+  #startTimerBtn{width:auto;flex-shrink:0;}
+  .timer-display{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.1rem;font-weight:700;
+    color:var(--ink-soft);
+  }
+  .timer-display.warning{color:var(--mark-red);}
+  textarea[readonly]{background:var(--paper);color:var(--ink-soft);cursor:not-allowed;}
 
   .task-meta{display:flex;gap:.75rem;flex-wrap:wrap;font-size:.8rem;color:var(--ink-soft);margin-top:.6rem;}
   .task-meta span{background:var(--paper);border:1px solid var(--paper-line);border-radius:8px;padding:.25rem .55rem;}
@@ -95,7 +112,7 @@
     padding:.75rem 1rem;border-radius:10px;font-size:.95rem;font-weight:600;cursor:pointer;
   }
 
-  .wordcount{display:flex;justify-content:flex-end;font-size:.78rem;color:var(--ink-faint);margin:-.4rem 0 .75rem;}
+  .wordcount{display:flex;justify-content:flex-end;font-size:.78rem;color:var(--ink-faint);margin:.4rem 0 .75rem;}
 
   .loading{display:none;text-align:center;padding:1.25rem;color:var(--ink-soft);font-size:.9rem;}
   .loading.visible{display:block;}
@@ -105,14 +122,6 @@
     animation:spin .8s linear infinite;
   }
   @keyframes spin{to{transform:rotate(360deg);}}
-
-  .task-card{
-    border:1px dashed var(--paper-line);border-radius:10px;padding:1rem 1.1rem;
-    background:var(--paper);margin-bottom:1rem;
-  }
-  .task-card h3{font-size:1.02rem;margin-bottom:.4rem;}
-  .task-card .content{font-size:.96rem;line-height:1.55;color:var(--ink);}
-  .task-card .instructions{font-size:.82rem;color:var(--ink-soft);margin-top:.5rem;font-style:italic;}
 
   #results{display:none;}
   #results.visible{display:block;}
@@ -142,11 +151,58 @@
   }
   .correction-item{background:var(--mark-red-bg);border-left:3px solid var(--mark-red);color:var(--ink);}
   .correction-item .orig{color:var(--mark-red);text-decoration:line-through;}
+  .error-tag{
+    display:inline-block;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.02em;
+    background:var(--mark-red);color:#fff;border-radius:5px;padding:.1rem .4rem;margin-right:.3rem;
+  }
   .suggestion-item{background:var(--stamp-teal-bg);border-left:3px solid var(--stamp-teal);color:var(--ink);}
   .suggestion-item b{color:var(--stamp-teal);}
 
   .disclaimer{font-size:.78rem;color:var(--ink-faint);text-align:center;margin-top:.5rem;}
   footer.note{text-align:center;font-size:.78rem;color:var(--ink-faint);margin-top:2rem;}
+  .link-btn{
+    background:none;border:none;color:var(--stamp-teal);font-size:.78rem;
+    text-decoration:underline;cursor:pointer;padding:.4rem 0;font-family:inherit;
+  }
+
+  .modal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(34,40,59,0.55);
+    align-items:center;justify-content:center;padding:1.5rem;z-index:50;
+  }
+  .modal-overlay.visible{display:flex;}
+  .modal-box{
+    background:var(--card);border-radius:var(--radius);max-width:640px;width:100%;
+    max-height:85vh;overflow-y:auto;padding:2rem;position:relative;box-shadow:var(--shadow);
+  }
+  .modal-box h2{font-size:1.4rem;margin-bottom:.75rem;}
+  .modal-box h3{font-size:1rem;margin:1.25rem 0 .6rem;}
+  .modal-box p{font-size:.92rem;line-height:1.6;color:var(--ink);margin-bottom:.5rem;}
+  .modal-close{
+    position:absolute;top:1rem;right:1rem;background:none;border:none;
+    font-size:1.5rem;line-height:1;color:var(--ink-faint);cursor:pointer;padding:.25rem;
+  }
+  .source-list{display:flex;flex-direction:column;gap:.6rem;}
+  .source-item{font-size:.88rem;line-height:1.55;color:var(--ink);background:var(--paper);border-radius:8px;padding:.65rem .8rem;}
+  .modal-footnote{font-size:.82rem;color:var(--ink-soft);margin-top:1.25rem;font-style:italic;}
+
+  .trend-block{margin-bottom:1.25rem;}
+  .trend-block h4{font-size:.85rem;color:var(--ink-soft);margin-bottom:.5rem;}
+  .trend-row, .mistake-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem;font-size:.82rem;}
+  .trend-row .trend-date{width:64px;flex-shrink:0;color:var(--ink-faint);}
+  .trend-row .trend-score{width:56px;flex-shrink:0;text-align:right;font-weight:600;color:var(--ink);}
+  .mistake-row .mistake-label{width:150px;flex-shrink:0;color:var(--ink);}
+  .mistake-row .mistake-count{width:28px;flex-shrink:0;text-align:right;color:var(--ink-soft);}
+
+  .markup-text{
+    font-size:.92rem;line-height:1.75;color:var(--ink);background:var(--paper);
+    border-radius:8px;padding:.9rem 1rem;white-space:pre-wrap;
+  }
+  .hl{text-decoration:underline wavy var(--mark-red);text-decoration-thickness:1.5px;text-underline-offset:3px;cursor:help;}
+  .model-answer-text{
+    margin-top:.75rem;font-size:.92rem;line-height:1.7;color:var(--ink);
+    background:var(--stamp-teal-bg);border-left:3px solid var(--stamp-teal);
+    border-radius:8px;padding:.9rem 1rem;white-space:pre-wrap;
+  }
 </style>
 </head>
 <body>
@@ -162,7 +218,7 @@
       <div>
         <label for="studentCode">Your code</label>
         <input type="text" id="studentCode" placeholder="e.g. FX7-K2N">
-        <p class="hint">Ask your teacher for the code they assigned you.</p>
+        <p class="hint">Ask your teacher for the code they assigned you. <button type="button" class="link-btn" id="viewProgressBtn" style="margin-left:.3rem">View my progress</button></p>
       </div>
       <div>
         <label for="examSelect">Exam</label>
@@ -174,7 +230,7 @@
         <label>Skill</label>
         <div class="pillgroup">
           <button type="button" class="pill active" data-skill="writing">Writing</button>
-          <button type="button" class="pill" data-skill="speaking">Speaking</button>
+          <button type="button" class="pill disabled" data-skill="speaking" disabled>Speaking <span class="soon-badge">soon</span></button>
         </div>
       </div>
       <div>
@@ -187,14 +243,37 @@
 
   <section class="card" id="workspaceSection">
     <button class="secondary" id="generateBtn">Generate a practice prompt for this task</button>
-    <div id="taskCardWrap" style="margin-top:1rem"></div>
+    <label for="promptText" style="margin-top:1rem">Prompt / topic</label>
+    <textarea id="promptText" class="prompt-box" placeholder="Click 'Generate a practice prompt' above, or paste your own question/topic here."></textarea>
+
+    <div id="imageUploadWrap" style="display:none;margin-top:1rem">
+      <label for="imageInput">Upload a photo (optional — if you have the real image for this task)</label>
+      <input type="file" id="imageInput" accept="image/*">
+      <div id="imagePreviewWrap" style="display:none">
+        <img id="imagePreview" alt="Uploaded photo preview">
+        <button type="button" class="link-btn" id="removeImageBtn">Remove image</button>
+      </div>
+    </div>
+
+    <div class="timer-row">
+      <button type="button" class="secondary" id="startTimerBtn">Start timer</button>
+      <span class="timer-display" id="timerDisplay"></span>
+    </div>
 
     <label for="essayText" style="margin-top:1rem">Your response</label>
-    <textarea id="essayText" placeholder="Write or paste your response here — generate a prompt above first if you want one, or bring your own."></textarea>
+    <textarea id="essayText" placeholder="Write or paste your response here."></textarea>
     <div class="wordcount"><span id="wordCount">0 words</span></div>
     <button class="primary" id="gradeBtn">Grade my work</button>
   </section>
 
+
+  <section class="card" id="progressSection" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h2 style="font-family:'Lora',serif;font-size:1.3rem">Your Progress</h2>
+      <button type="button" class="link-btn" id="backToPracticeBtn">Back to practice</button>
+    </div>
+    <div id="progressContent"></div>
+  </section>
 
   <div class="loading" id="loading">
     <div class="spinner"></div>
@@ -210,6 +289,10 @@
     </div>
     <div id="criteriaList"></div>
     <p class="disclaimer" id="disclaimer"></p>
+    <div class="feedback-block" id="markupBlock" style="display:none">
+      <h4>Your Response, Marked Up</h4>
+      <div class="markup-text" id="markupText"></div>
+    </div>
     <div class="feedback-block" id="correctionsBlock" style="display:none">
       <h4>Corrections</h4>
       <div id="correctionsList"></div>
@@ -218,9 +301,37 @@
       <h4>Suggestions</h4>
       <div id="suggestionsList"></div>
     </div>
+    <div class="feedback-block" id="modelAnswerBlock" style="display:none">
+      <h4>Model Answer</h4>
+      <button type="button" class="secondary" id="showModelAnswerBtn">Show me a model answer</button>
+      <p class="modal-footnote" style="margin-top:.4rem">An AI-written example for this exact prompt — useful for seeing what "good" looks like, not something to copy.</p>
+      <div class="model-answer-text" id="modelAnswerText" style="display:none"></div>
+    </div>
   </section>
 
-  <footer class="note">Graded by AI against exam-specific criteria — use it for practice, not as an official score.</footer>
+  <footer class="note">
+    Graded by AI against exam-specific criteria — use it for practice, not as an official score.<br>
+    <button class="link-btn" id="howWeGradeBtn" type="button">How is this graded?</button>
+  </footer>
+
+  <div class="modal-overlay" id="gradeModalOverlay">
+    <div class="modal-box">
+      <button class="modal-close" id="closeGradeModal" type="button" aria-label="Close">&times;</button>
+      <h2>How scoring works</h2>
+      <p>Every response here is read and scored by Claude (Anthropic's AI) — but it isn't grading freely. For each exam, it's instructed to follow specific scoring criteria sourced from real exam materials, not its own general sense of "good writing."</p>
+
+      <h3>Where each rubric comes from</h3>
+      <div class="source-list">
+        <div class="source-item"><b>IELTS</b> — IELTS's own band descriptor framework: Task Achievement / Task Response, Coherence and Cohesion, Lexical Resource, and Grammatical Range and Accuracy.</div>
+        <div class="source-item"><b>TOEFL iBT</b> — ETS's official scoring criteria for the current TOEFL format (the Write an Email / Academic Discussion and Listen and Repeat / Take an Interview tasks introduced in January 2026).</div>
+        <div class="source-item"><b>Duolingo English Test</b> — Duolingo's own published scoring dimensions: Content, Discourse Coherence, Grammar, and Lexis. DET's full scoring algorithm is proprietary and undisclosed, so practice scores here are our best grounded approximation, not an official DET prediction.</div>
+        <div class="source-item"><b>Cambridge FCE, CAE, CPE, PET, KET</b> — Cambridge Assessment English's official Handbook for Teachers for each individual level, including examiner guidance on common mistakes.</div>
+        <div class="source-item"><b>ОГЭ and ЕГЭ</b> — FIPI's official current exam specification and demo version (демоверсия) for the Russian state exams.</div>
+      </div>
+
+      <p class="modal-footnote">Every rubric above has been reviewed and approved by Kay, an experienced English teacher across these exams — not generated by AI guesswork. This explains our methodology; it isn't a guarantee of your real exam score, but it's grounded in the same standards real examiners use.</p>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -241,6 +352,7 @@ const FALLBACK_LABELS = {
 };
 
 let currentSkill = "writing";
+let lastResultContext = null;
 let currentGeneratedTask = null;
 
 const examSelect = document.getElementById("examSelect");
@@ -300,15 +412,18 @@ async function loadTasks() {
 
 function showTaskMeta() {
   const opt = taskSelect.options[taskSelect.selectedIndex];
-  if (!opt || !opt.dataset.meta) { taskMeta.innerHTML = ""; return; }
+  if (!opt || !opt.dataset.meta) { taskMeta.innerHTML = ""; document.getElementById("imageUploadWrap").style.display = "none"; clearTimerUI(); return; }
   const t = JSON.parse(opt.dataset.meta);
   let html = "";
   if (t.wordLimit) html += `<span>~${t.wordLimit} words</span>`;
   if (t.timeLimit) html += `<span>${t.timeLimit} min</span>`;
   taskMeta.innerHTML = html;
+  document.getElementById("imageUploadWrap").style.display = t.requiresImage ? "" : "none";
   if (t.requiresImage) {
-    taskMeta.innerHTML += `<div class="image-note" style="width:100%">This task normally includes a photo. For now the prompt describes the scene in words instead.</div>`;
+    taskMeta.innerHTML += `<div class="image-note" style="width:100%">This task normally includes a photo. Either describe the scene in words above, or upload the real photo below if you have it.</div>`;
   }
+  clearImage();
+  clearTimerUI();
 }
 
 examSelect.addEventListener("change", loadTasks);
@@ -331,7 +446,111 @@ function wireWordCount(textareaId, countId) {
     out.textContent = `${words} word${words === 1 ? "" : "s"}`;
   });
 }
+let timerInterval = null;
+let timerRemainingSeconds = 0;
+let timerTotalSeconds = 0;
+
+function getCurrentTaskTimeLimit() {
+  const opt = taskSelect.options[taskSelect.selectedIndex];
+  if (!opt || !opt.dataset.meta) return null;
+  const t = JSON.parse(opt.dataset.meta);
+  return t.timeLimit || null; // minutes, may be fractional
+}
+
+function clearTimerUI() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  timerRemainingSeconds = 0;
+  timerTotalSeconds = 0;
+  const display = document.getElementById("timerDisplay");
+  display.textContent = "";
+  display.classList.remove("warning");
+  document.getElementById("essayText").readOnly = false;
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(timerRemainingSeconds / 60);
+  const s = timerRemainingSeconds % 60;
+  const display = document.getElementById("timerDisplay");
+  display.textContent = `${m}:${String(s).padStart(2, "0")}`;
+  display.classList.toggle("warning", timerTotalSeconds > 0 && timerRemainingSeconds <= timerTotalSeconds * 0.2);
+}
+
+function startTimer() {
+  const limitMin = getCurrentTaskTimeLimit();
+  if (!limitMin) { alert("This task doesn't have a set time limit."); return; }
+  if (timerInterval) clearInterval(timerInterval);
+  document.getElementById("essayText").readOnly = false;
+  timerTotalSeconds = Math.round(limitMin * 60);
+  timerRemainingSeconds = timerTotalSeconds;
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timerRemainingSeconds--;
+    if (timerRemainingSeconds <= 0) {
+      timerRemainingSeconds = 0;
+      clearInterval(timerInterval);
+      timerInterval = null;
+      document.getElementById("essayText").readOnly = true;
+      document.getElementById("timerDisplay").textContent = "Time's up — you can still grade what you have";
+      document.getElementById("timerDisplay").classList.add("warning");
+    } else {
+      updateTimerDisplay();
+    }
+  }, 1000);
+}
+
+document.getElementById("startTimerBtn").addEventListener("click", startTimer);
+
 wireWordCount("essayText", "wordCount");
+
+let currentImageBase64 = null;
+
+function readAndResizeImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1024;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.85)); // re-encoded, so always image/jpeg from here on
+      };
+      img.onerror = () => reject(new Error("Couldn't read that as an image"));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("Couldn't read that file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById("imageInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const dataUrl = await readAndResizeImage(file);
+    currentImageBase64 = dataUrl.split(",")[1];
+    document.getElementById("imagePreview").src = dataUrl;
+    document.getElementById("imagePreviewWrap").style.display = "flex";
+  } catch (err) {
+    alert("Couldn't process that image: " + err.message);
+  }
+});
+
+document.getElementById("removeImageBtn").addEventListener("click", clearImage);
+
+function clearImage() {
+  currentImageBase64 = null;
+  const input = document.getElementById("imageInput");
+  if (input) input.value = "";
+  const wrap = document.getElementById("imagePreviewWrap");
+  if (wrap) wrap.style.display = "none";
+}
 
 function setLoading(on, text) {
   document.getElementById("loading").classList.toggle("visible", on);
@@ -351,28 +570,13 @@ async function generateTask() {
     const data = await res.json();
     if (data.error) { alert(data.error); return; }
     currentGeneratedTask = data;
-    renderTaskCard(data);
+    document.getElementById("promptText").value = data.content;
   } catch (e) {
     alert("Couldn't generate a task: " + e.message);
   } finally {
     setLoading(false);
     document.getElementById("generateBtn").disabled = false;
   }
-}
-
-function renderTaskCard(t) {
-  const wrap = document.getElementById("taskCardWrap");
-  wrap.innerHTML = `
-    <div class="task-card">
-      <h3>${t.title}</h3>
-      <div class="content">${t.content}</div>
-      <div class="instructions">${t.instructions}</div>
-      <div class="task-meta">
-        ${t.wordLimit ? `<span>~${t.wordLimit} words</span>` : ""}
-        ${t.timeLimit ? `<span>${t.timeLimit} min</span>` : ""}
-      </div>
-      ${t.requiresImage ? `<div class="image-note">This task normally includes a photo — described in words for now.</div>` : ""}
-    </div>`;
 }
 
 async function gradeSubmission(text) {
@@ -390,12 +594,14 @@ async function gradeSubmission(text) {
         examKey: examSelect.value,
         skill: currentSkill,
         taskId: taskSelect.value,
-        text
+        prompt: document.getElementById("promptText").value.trim(),
+        text,
+        image: currentImageBase64 ? { mediaType: "image/jpeg", data: currentImageBase64 } : undefined
       })
     });
     const data = await res.json();
     if (data.error) { alert(data.error); return; }
-    renderResults(data);
+    renderResults(data, text, document.getElementById("promptText").value.trim());
   } catch (e) {
     alert("Couldn't grade that: " + e.message);
   } finally {
@@ -403,7 +609,39 @@ async function gradeSubmission(text) {
   }
 }
 
-function renderResults(data) {
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function buildHighlightedMarkup(text, errors) {
+  // Find non-overlapping positions of each correction's "original" phrase in
+  // the raw text, then rebuild the HTML once, escaping as we go, so flagged
+  // phrases get wrapped without breaking on overlaps or near-misses.
+  const matches = [];
+  errors.forEach(e => {
+    if (!e.original) return;
+    const idx = text.indexOf(e.original);
+    if (idx === -1) return; // model's "original" wasn't a verbatim substring — skip rather than guess
+    const overlaps = matches.some(m => idx < m.end && idx + e.original.length > m.start);
+    if (overlaps) return;
+    matches.push({ start: idx, end: idx + e.original.length, typeLabel: e.typeLabel, correction: e.correction });
+  });
+  matches.sort((a, b) => a.start - b.start);
+
+  let html = "";
+  let pos = 0;
+  matches.forEach(m => {
+    html += escapeHtml(text.slice(pos, m.start));
+    const phrase = escapeHtml(text.slice(m.start, m.end));
+    const tip = escapeHtml(`${m.typeLabel || "Correction"}: → ${m.correction}`);
+    html += `<span class="hl" title="${tip}">${phrase}</span>`;
+    pos = m.end;
+  });
+  html += escapeHtml(text.slice(pos));
+  return html;
+}
+
+function renderResults(data, originalText, usedPrompt) {
   document.getElementById("stampNum").textContent = data.total;
   document.getElementById("stampMax").textContent = `/ ${data.maxTotal}`;
 
@@ -421,8 +659,15 @@ function renderResults(data) {
   });
 
   document.getElementById("disclaimer").textContent =
-    data.examKey === "det" ? "Practice estimate — not an official Duoligo English Test score." :
-    (data.examKey === "oge" || data.examKey === "ege") ? "Placeholder rubric weights — ask your teacher to confirm against this year's FIPI criteria." : "";
+    data.examKey === "det" ? "Practice estimate — not an official Duoligo English Test score." : "";
+
+  const markupBlock = document.getElementById("markupBlock");
+  if (data.errors && data.errors.length && originalText) {
+    markupBlock.style.display = "";
+    document.getElementById("markupText").innerHTML = buildHighlightedMarkup(originalText, data.errors);
+  } else {
+    markupBlock.style.display = "none";
+  }
 
   const correctionsBlock = document.getElementById("correctionsBlock");
   const correctionsList = document.getElementById("correctionsList");
@@ -432,7 +677,8 @@ function renderResults(data) {
     data.errors.forEach(e => {
       const d = document.createElement("div");
       d.className = "correction-item";
-      d.innerHTML = `<span class="orig">${e.original}</span> → ${e.correction}`;
+      const tag = e.typeLabel ? `<span class="error-tag">${e.typeLabel}</span> ` : "";
+      d.innerHTML = `${tag}<span class="orig">${e.original}</span> → ${e.correction}`;
       correctionsList.appendChild(d);
     });
   } else { correctionsBlock.style.display = "none"; }
@@ -450,12 +696,133 @@ function renderResults(data) {
     });
   } else { suggestionsBlock.style.display = "none"; }
 
+  lastResultContext = { examKey: data.examKey, skill: data.skill, taskId: data.taskId, prompt: usedPrompt };
+  document.getElementById("modelAnswerBlock").style.display = usedPrompt ? "" : "none";
+  document.getElementById("modelAnswerText").style.display = "none";
+  document.getElementById("modelAnswerText").textContent = "";
+  const modelBtn = document.getElementById("showModelAnswerBtn");
+  modelBtn.style.display = "";
+  modelBtn.disabled = false;
+  modelBtn.textContent = "Show me a model answer";
+
   document.getElementById("results").classList.add("visible");
   document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 document.getElementById("gradeBtn").addEventListener("click", () => gradeSubmission(document.getElementById("essayText").value));
 document.getElementById("generateBtn").addEventListener("click", generateTask);
+
+document.getElementById("showModelAnswerBtn").addEventListener("click", async () => {
+  if (!lastResultContext || !lastResultContext.prompt) {
+    alert("No prompt available for this submission — model answers need a prompt to write to.");
+    return;
+  }
+  const btn = document.getElementById("showModelAnswerBtn");
+  btn.disabled = true;
+  btn.textContent = "Generating...";
+  try {
+    const res = await fetch(`${BACKEND_URL}/model-answer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lastResultContext)
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); btn.disabled = false; btn.textContent = "Show me a model answer"; return; }
+    document.getElementById("modelAnswerText").textContent = data.modelAnswer;
+    document.getElementById("modelAnswerText").style.display = "";
+    btn.style.display = "none";
+  } catch (e) {
+    alert("Couldn't generate a model answer: " + e.message);
+    btn.disabled = false;
+    btn.textContent = "Show me a model answer";
+  }
+});
+
+const gradeModalOverlay = document.getElementById("gradeModalOverlay");
+document.getElementById("howWeGradeBtn").addEventListener("click", () => gradeModalOverlay.classList.add("visible"));
+document.getElementById("closeGradeModal").addEventListener("click", () => gradeModalOverlay.classList.remove("visible"));
+gradeModalOverlay.addEventListener("click", (e) => { if (e.target === gradeModalOverlay) gradeModalOverlay.classList.remove("visible"); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") gradeModalOverlay.classList.remove("visible"); });
+
+document.getElementById("viewProgressBtn").addEventListener("click", loadProgress);
+document.getElementById("backToPracticeBtn").addEventListener("click", () => {
+  document.getElementById("progressSection").style.display = "none";
+  document.getElementById("workspaceSection").style.display = "";
+});
+
+async function loadProgress() {
+  const code = studentCodeInput.value.trim();
+  if (!code) { alert("Enter your student code first."); return; }
+  document.getElementById("workspaceSection").style.display = "none";
+  document.getElementById("results").classList.remove("visible");
+  document.getElementById("progressSection").style.display = "";
+  document.getElementById("progressContent").innerHTML = "<p>Loading...</p>";
+  try {
+    const res = await fetch(`${BACKEND_URL}/student/${encodeURIComponent(code)}/history`);
+    if (!res.ok) { document.getElementById("progressContent").innerHTML = "<p>Couldn't load your history — check your code and try again.</p>"; return; }
+    const data = await res.json();
+    renderProgress(data.submissions || []);
+  } catch (e) {
+    document.getElementById("progressContent").innerHTML = `<p>Couldn't reach the server: ${e.message}</p>`;
+  }
+}
+
+function renderProgress(submissions) {
+  const content = document.getElementById("progressContent");
+  if (!submissions.length) {
+    content.innerHTML = "<p>No submissions yet — grade something first, then check back here.</p>";
+    return;
+  }
+
+  const byExam = {};
+  submissions.forEach(s => {
+    if (!byExam[s.exam_key]) byExam[s.exam_key] = [];
+    byExam[s.exam_key].push(s);
+  });
+
+  let html = "<h3 style=\"font-family:'Lora',serif;font-size:1rem;margin-bottom:.75rem\">Score trend</h3>";
+  Object.keys(byExam).forEach(examKey => {
+    const subs = byExam[examKey].slice().reverse(); // API returns newest-first; flip to chronological
+    const label = FALLBACK_LABELS[examKey] || examKey;
+    html += `<div class="trend-block"><h4>${label}</h4>`;
+    subs.slice(-8).forEach(s => { // most recent 8 attempts, oldest of those first
+      const pct = s.max_total ? Math.min(100, (s.total_score / s.max_total) * 100) : 0;
+      const date = new Date(s.created_at).toLocaleDateString();
+      html += `<div class="trend-row">
+        <span class="trend-date">${date}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <span class="trend-score">${s.total_score ?? "—"}${s.max_total ? "/" + s.max_total : ""}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  const mistakeCounts = {};
+  submissions.forEach(s => {
+    let corrections = [];
+    try { corrections = JSON.parse(s.corrections || "[]"); } catch (e) { /* tolerate malformed/older rows */ }
+    corrections.forEach(c => {
+      const label = (c && (c.typeLabel || c.type)) || "Other";
+      mistakeCounts[label] = (mistakeCounts[label] || 0) + 1;
+    });
+  });
+  const sortedMistakes = Object.entries(mistakeCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  if (sortedMistakes.length) {
+    const maxCount = sortedMistakes[0][1];
+    html += "<h3 style=\"font-family:'Lora',serif;font-size:1rem;margin:1.5rem 0 .75rem\">Recurring mistakes</h3>";
+    sortedMistakes.forEach(([label, count]) => {
+      const pct = Math.round((count / maxCount) * 100);
+      html += `<div class="mistake-row">
+        <span class="mistake-label">${label}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--mark-red)"></div></div>
+        <span class="mistake-count">${count}</span>
+      </div>`;
+    });
+  }
+
+  content.innerHTML = html;
+}
 
 loadExams();
 </script>
