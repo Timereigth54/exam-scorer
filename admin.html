@@ -36,6 +36,31 @@
   #app{display:none;}
   .history{display:none;margin-top:.5rem;}
   .history.visible{display:block;}
+
+  .bar-track{height:8px;background:var(--paper-line);border-radius:6px;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--stamp-teal);border-radius:6px;}
+  .trend-block{margin-bottom:1.1rem;}
+  .trend-block h5{font-size:.82rem;color:var(--ink-soft);margin-bottom:.4rem;}
+  .trend-row, .mistake-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem;font-size:.82rem;}
+  .trend-row .trend-date{width:64px;flex-shrink:0;color:var(--ink-faint);}
+  .trend-row .trend-score{width:56px;flex-shrink:0;text-align:right;font-weight:600;color:var(--ink);}
+  .mistake-row .mistake-label{width:150px;flex-shrink:0;color:var(--ink);}
+  .mistake-row .mistake-count{width:28px;flex-shrink:0;text-align:right;color:var(--ink-soft);}
+
+  .hcard{border:1px solid var(--paper-line);border-radius:10px;margin-bottom:.6rem;overflow:hidden;}
+  .hcard-header{display:flex;gap:.75rem;align-items:center;padding:.6rem .8rem;cursor:pointer;font-size:.85rem;background:#fff;}
+  .hcard-header:hover{background:var(--paper);}
+  .hcard-header .hc-date{color:var(--ink-faint);width:70px;flex-shrink:0;}
+  .hcard-header .hc-tag{color:var(--ink-soft);}
+  .hcard-header .hc-score{margin-left:auto;font-weight:700;color:var(--stamp-teal);}
+  .hcard-body{display:none;padding:.8rem 1rem 1rem;background:var(--paper);border-top:1px solid var(--paper-line);}
+  .hcard-body.open{display:block;}
+  .hc-section{margin-bottom:.7rem;font-size:.85rem;line-height:1.55;}
+  .hc-section b{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);margin-bottom:.25rem;}
+  .hc-text{white-space:pre-wrap;background:#fff;border-radius:6px;padding:.5rem .65rem;border:1px solid var(--paper-line);}
+  .hc-correction{background:#FBEDE8;border-left:3px solid #C84B31;border-radius:6px;padding:.4rem .6rem;margin-bottom:.3rem;}
+  .hc-suggestion{background:var(--stamp-teal-bg);border-left:3px solid var(--stamp-teal);border-radius:6px;padding:.4rem .6rem;margin-bottom:.3rem;}
+  .hc-tag{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;background:#C84B31;color:#fff;border-radius:5px;padding:.05rem .35rem;margin-right:.3rem;}
 </style>
 </head>
 <body>
@@ -77,10 +102,9 @@
 
     <div class="card history" id="historyCard">
       <h3 id="historyTitle" style="font-family:'Lora',serif"></h3>
-      <table>
-        <thead><tr><th>Date</th><th>Exam</th><th>Skill</th><th>Task</th><th>Score</th></tr></thead>
-        <tbody id="historyBody"></tbody>
-      </table>
+      <div id="historyProgress"></div>
+      <h4 style="font-size:.85rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin:1.25rem 0 .6rem">Submission history</h4>
+      <div id="historyList"></div>
     </div>
   </div>
 </div>
@@ -89,6 +113,17 @@
 // *** Same Worker URL as index.html — trailing slash is fine, it gets stripped automatically ***
 const BACKEND_URL = "https://exam-scorer.kayuso2011.workers.dev/".replace(/\/+$/, "");
 let adminKey = sessionStorage.getItem("examPrepAdminKey") || "";
+
+const EXAM_LABELS = {
+  ielts: "IELTS", toefl: "TOEFL iBT", det: "Duolingo English Test",
+  fce: "Cambridge FCE (B2 First)", cae: "Cambridge CAE (C1 Advanced)", cpe: "Cambridge CPE (C2 Proficiency)",
+  pet: "Cambridge PET (B1 Preliminary)", ket: "Cambridge KET (A2 Key)",
+  oge: "ОГЭ (Russian state, grade 9)", ege: "ЕГЭ (Russian state, grade 11)"
+};
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
 
 function authHeaders() { return { "X-Admin-Key": adminKey, "Content-Type": "application/json" }; }
 
@@ -150,18 +185,99 @@ async function loadHistory(code, name) {
     if (!res.ok) { alert(`Couldn't load history (server returned ${res.status}).`); return; }
     const data = await res.json();
     document.getElementById("historyTitle").textContent = `${name} — ${code}`;
-    const body = document.getElementById("historyBody");
-    body.innerHTML = "";
-    (data.submissions || []).forEach(s => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${new Date(s.created_at).toLocaleDateString()}</td><td>${s.exam_key}</td><td>${s.skill}</td><td>${s.task_id || "—"}</td><td>${s.total_score ?? "—"}</td>`;
-      body.appendChild(tr);
-    });
+    renderHistoryProgress(data.submissions || []);
+    renderHistoryList(data.submissions || []);
     document.getElementById("historyCard").classList.add("visible");
     document.getElementById("historyCard").scrollIntoView({ behavior: "smooth" });
   } catch (e) {
     alert("Couldn't reach the server to load history: " + e.message);
   }
+}
+
+function renderHistoryProgress(submissions) {
+  const el = document.getElementById("historyProgress");
+  if (!submissions.length) { el.innerHTML = "<p style='font-size:.85rem;color:var(--ink-faint)'>No submissions yet.</p>"; return; }
+
+  const byExam = {};
+  submissions.forEach(s => { (byExam[s.exam_key] ||= []).push(s); });
+
+  let html = "<h4 style=\"font-size:.85rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:.6rem\">Score trend</h4>";
+  Object.keys(byExam).forEach(examKey => {
+    const subs = byExam[examKey].slice().reverse(); // API returns newest-first; flip to chronological
+    html += `<div class="trend-block"><h5>${escapeHtml(EXAM_LABELS[examKey] || examKey)}</h5>`;
+    subs.slice(-8).forEach(s => {
+      const pct = s.max_total ? Math.min(100, (s.total_score / s.max_total) * 100) : 0;
+      const date = new Date(s.created_at).toLocaleDateString();
+      html += `<div class="trend-row">
+        <span class="trend-date">${date}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <span class="trend-score">${s.total_score ?? "—"}${s.max_total ? "/" + s.max_total : ""}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  const mistakeCounts = {};
+  submissions.forEach(s => {
+    let corrections = [];
+    try { corrections = JSON.parse(s.corrections || "[]"); } catch (e) {}
+    corrections.forEach(c => {
+      const label = (c && (c.typeLabel || c.type)) || "Other";
+      mistakeCounts[label] = (mistakeCounts[label] || 0) + 1;
+    });
+  });
+  const sortedMistakes = Object.entries(mistakeCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (sortedMistakes.length) {
+    const maxCount = sortedMistakes[0][1];
+    html += "<h4 style=\"font-size:.85rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin:1rem 0 .6rem\">Recurring mistakes</h4>";
+    sortedMistakes.forEach(([label, count]) => {
+      const pct = Math.round((count / maxCount) * 100);
+      html += `<div class="mistake-row">
+        <span class="mistake-label">${escapeHtml(label)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:#C84B31"></div></div>
+        <span class="mistake-count">${count}</span>
+      </div>`;
+    });
+  }
+  el.innerHTML = html;
+}
+
+function renderHistoryList(submissions) {
+  const el = document.getElementById("historyList");
+  if (!submissions.length) { el.innerHTML = ""; return; }
+
+  el.innerHTML = submissions.map((s, i) => {
+    const date = new Date(s.created_at).toLocaleString();
+    const examLabel = EXAM_LABELS[s.exam_key] || s.exam_key;
+    const scoreText = `${s.total_score ?? "—"}${s.max_total ? "/" + s.max_total : ""}`;
+
+    let corrections = [], suggestions = [];
+    try { corrections = JSON.parse(s.corrections || "[]"); } catch (e) {}
+    try { suggestions = JSON.parse(s.feedback || "[]"); } catch (e) {}
+
+    const correctionsHtml = corrections.length
+      ? corrections.map(c => `<div class="hc-correction">${c.typeLabel ? `<span class="hc-tag">${escapeHtml(c.typeLabel)}</span>` : ""}<span style="text-decoration:line-through;color:#C84B31">${escapeHtml(c.original)}</span> → ${escapeHtml(c.correction)}</div>`).join("")
+      : "<p style='color:var(--ink-faint);font-size:.82rem'>No corrections flagged.</p>";
+
+    const suggestionsHtml = suggestions.length
+      ? suggestions.map(sug => `<div class="hc-suggestion">${sug.criterionName ? `<b style="display:inline;text-transform:none;font-size:.82rem;color:var(--stamp-teal)">${escapeHtml(sug.criterionName)}</b> — ` : ""}${escapeHtml(sug.tip || sug)}</div>`).join("")
+      : "<p style='color:var(--ink-faint);font-size:.82rem'>No suggestions.</p>";
+
+    return `
+      <div class="hcard">
+        <div class="hcard-header" onclick="document.getElementById('hcbody-${i}').classList.toggle('open')">
+          <span class="hc-date">${date}</span>
+          <span class="hc-tag">${escapeHtml(examLabel)} · ${escapeHtml(s.skill)}${s.task_id ? " · " + escapeHtml(s.task_id) : ""}</span>
+          <span class="hc-score">${scoreText}</span>
+        </div>
+        <div class="hcard-body" id="hcbody-${i}">
+          <div class="hc-section"><b>Prompt</b><div class="hc-text">${s.prompt_text ? escapeHtml(s.prompt_text) : "<em>No prompt recorded for this submission.</em>"}</div></div>
+          <div class="hc-section"><b>Student's response</b><div class="hc-text">${escapeHtml(s.submission_text)}</div></div>
+          <div class="hc-section"><b>Corrections</b>${correctionsHtml}</div>
+          <div class="hc-section"><b>Suggestions</b>${suggestionsHtml}</div>
+        </div>
+      </div>`;
+  }).join("");
 }
 
 document.getElementById("addBtn").addEventListener("click", async () => {
