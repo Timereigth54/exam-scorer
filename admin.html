@@ -251,17 +251,27 @@ function renderHistoryList(submissions) {
     const examLabel = EXAM_LABELS[s.exam_key] || s.exam_key;
     const scoreText = `${s.total_score ?? "—"}${s.max_total ? "/" + s.max_total : ""}`;
 
-    let corrections = [], suggestions = [];
+    let corrections = [], suggestions = [], criteriaFeedback = [];
     try { corrections = JSON.parse(s.corrections || "[]"); } catch (e) {}
     try { suggestions = JSON.parse(s.feedback || "[]"); } catch (e) {}
+    try { criteriaFeedback = JSON.parse(s.criteria_feedback || "[]"); } catch (e) {}
 
     const correctionsHtml = corrections.length
-      ? corrections.map(c => `<div class="hc-correction">${c.typeLabel ? `<span class="hc-tag">${escapeHtml(c.typeLabel)}</span>` : ""}<span style="text-decoration:line-through;color:#C84B31">${escapeHtml(c.original)}</span> → ${escapeHtml(c.correction)}</div>`).join("")
+      ? corrections.map(c => `<div class="hc-correction">${c.typeLabel ? `<span class="hc-tag">${escapeHtml(c.typeLabel)}</span>` : ""}<span style="text-decoration:line-through;color:#C84B31">${escapeHtml(c.original)}</span> → ${escapeHtml(c.correction)}${c.explanation ? `<div style="font-size:.8rem;color:var(--ink-soft);margin-top:.2rem">${escapeHtml(c.explanation)}</div>` : ""}</div>`).join("")
       : "<p style='color:var(--ink-faint);font-size:.82rem'>No corrections flagged.</p>";
 
     const suggestionsHtml = suggestions.length
-      ? suggestions.map(sug => `<div class="hc-suggestion">${sug.criterionName ? `<b style="display:inline;text-transform:none;font-size:.82rem;color:var(--stamp-teal)">${escapeHtml(sug.criterionName)}</b> — ` : ""}${escapeHtml(sug.tip || sug)}</div>`).join("")
+      ? suggestions.map(sug => `<div class="hc-suggestion">${sug.criterionName ? `<b style="display:inline;text-transform:none;font-size:.82rem;color:var(--stamp-teal)">${escapeHtml(sug.criterionName)}</b> — ` : ""}${escapeHtml(sug.tip || sug)}${sug.example ? `<div style="font-style:italic;font-size:.82rem;color:var(--ink-soft);margin-top:.2rem">${escapeHtml(sug.example)}</div>` : ""}</div>`).join("")
       : "<p style='color:var(--ink-faint);font-size:.82rem'>No suggestions.</p>";
+
+    const criteriaFeedbackHtml = criteriaFeedback.length
+      ? criteriaFeedback.map(cf => `<div class="hc-suggestion" style="border-left-color:#7A8B69">
+          <b style="display:inline;text-transform:none;font-size:.82rem">${escapeHtml(cf.criterionName || cf.criterion)}</b>
+          ${cf.strength ? `<div style="font-size:.82rem;margin-top:.15rem"><b>Well:</b> ${escapeHtml(cf.strength)}</div>` : ""}
+          ${cf.weakness ? `<div style="font-size:.82rem;margin-top:.15rem"><b>Gap:</b> ${escapeHtml(cf.weakness)}</div>` : ""}
+          ${cf.howToImprove ? `<div style="font-size:.82rem;margin-top:.15rem"><b>Next:</b> ${escapeHtml(cf.howToImprove)}</div>` : ""}
+        </div>`).join("")
+      : "<p style='color:var(--ink-faint);font-size:.82rem'>No per-criterion feedback recorded (older submission).</p>";
 
     return `
       <div class="hcard">
@@ -273,6 +283,7 @@ function renderHistoryList(submissions) {
         <div class="hcard-body" id="hcbody-${i}">
           <div class="hc-section"><b>Prompt</b><div class="hc-text">${s.prompt_text ? escapeHtml(s.prompt_text) : "<em>No prompt recorded for this submission.</em>"}</div></div>
           <div class="hc-section"><b>Student's response</b><div class="hc-text">${escapeHtml(s.submission_text)}</div></div>
+          <div class="hc-section"><b>Criterion-by-criterion</b>${criteriaFeedbackHtml}</div>
           <div class="hc-section"><b>Corrections</b>${correctionsHtml}</div>
           <div class="hc-section"><b>Suggestions</b>${suggestionsHtml}</div>
         </div>

@@ -157,6 +157,17 @@
   }
   .suggestion-item{background:var(--stamp-teal-bg);border-left:3px solid var(--stamp-teal);color:var(--ink);}
   .suggestion-item b{color:var(--stamp-teal);}
+  .suggestion-item .example{display:block;margin-top:.3rem;font-style:italic;color:var(--ink-soft);}
+  .correction-item .explain{display:block;margin-top:.25rem;font-size:.82rem;color:var(--ink-soft);}
+  .crit-feedback-item{
+    border-radius:8px;padding:.6rem .75rem;margin-bottom:.55rem;font-size:.88rem;
+    background:var(--bg-soft, #f6f5f1);border:1px solid var(--border, #e5e1d8);
+  }
+  .crit-feedback-item h5{margin:0 0 .35rem;font-size:.85rem;font-weight:700;}
+  .crit-feedback-item p{margin:.15rem 0;}
+  .crit-feedback-item .cf-strength{color:var(--stamp-teal);}
+  .crit-feedback-item .cf-weakness{color:var(--mark-red);}
+  .crit-feedback-item .cf-improve{color:var(--ink);font-weight:600;}
 
   .disclaimer{font-size:.78rem;color:var(--ink-faint);text-align:center;margin-top:.5rem;}
   footer.note{text-align:center;font-size:.78rem;color:var(--ink-faint);margin-top:2rem;}
@@ -289,6 +300,10 @@
     </div>
     <div id="criteriaList"></div>
     <p class="disclaimer" id="disclaimer"></p>
+    <div class="feedback-block" id="criteriaFeedbackBlock" style="display:none">
+      <h4>How You Did, Criterion by Criterion</h4>
+      <div id="criteriaFeedbackList"></div>
+    </div>
     <div class="feedback-block" id="markupBlock" style="display:none">
       <h4>Your Response, Marked Up</h4>
       <div class="markup-text" id="markupText"></div>
@@ -661,6 +676,22 @@ function renderResults(data, originalText, usedPrompt) {
   document.getElementById("disclaimer").textContent =
     data.examKey === "det" ? "Practice estimate — not an official Duoligo English Test score." : "";
 
+  const critFbBlock = document.getElementById("criteriaFeedbackBlock");
+  const critFbList = document.getElementById("criteriaFeedbackList");
+  critFbList.innerHTML = "";
+  if (data.criteriaFeedback && data.criteriaFeedback.length) {
+    critFbBlock.style.display = "";
+    data.criteriaFeedback.forEach(cf => {
+      const d = document.createElement("div");
+      d.className = "crit-feedback-item";
+      d.innerHTML = `<h5>${cf.criterionName || cf.criterion}</h5>` +
+        (cf.strength ? `<p><b>Doing well:</b> <span class="cf-strength">${cf.strength}</span></p>` : "") +
+        (cf.weakness ? `<p><b>Held back by:</b> <span class="cf-weakness">${cf.weakness}</span></p>` : "") +
+        (cf.howToImprove ? `<p><b>Next time:</b> <span class="cf-improve">${cf.howToImprove}</span></p>` : "");
+      critFbList.appendChild(d);
+    });
+  } else { critFbBlock.style.display = "none"; }
+
   const markupBlock = document.getElementById("markupBlock");
   if (data.errors && data.errors.length && originalText) {
     markupBlock.style.display = "";
@@ -678,7 +709,8 @@ function renderResults(data, originalText, usedPrompt) {
       const d = document.createElement("div");
       d.className = "correction-item";
       const tag = e.typeLabel ? `<span class="error-tag">${e.typeLabel}</span> ` : "";
-      d.innerHTML = `${tag}<span class="orig">${e.original}</span> → ${e.correction}`;
+      const explain = e.explanation ? `<span class="explain">${e.explanation}</span>` : "";
+      d.innerHTML = `${tag}<span class="orig">${e.original}</span> → ${e.correction}${explain}`;
       correctionsList.appendChild(d);
     });
   } else { correctionsBlock.style.display = "none"; }
@@ -691,7 +723,8 @@ function renderResults(data, originalText, usedPrompt) {
     data.suggestions.forEach(s => {
       const d = document.createElement("div");
       d.className = "suggestion-item";
-      d.innerHTML = s.criterionName ? `<b>${s.criterionName}</b> — ${s.tip}` : s.tip;
+      const example = s.example ? `<span class="example">${s.example}</span>` : "";
+      d.innerHTML = (s.criterionName ? `<b>${s.criterionName}</b> — ${s.tip}` : s.tip) + example;
       suggestionsList.appendChild(d);
     });
   } else { suggestionsBlock.style.display = "none"; }
