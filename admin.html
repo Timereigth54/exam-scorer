@@ -95,7 +95,7 @@
 
     <div class="card">
       <table id="rosterTable">
-        <thead><tr><th>Name</th><th>Code</th><th>Cohort</th><th>Submissions</th><th>Images</th><th>Last activity</th></tr></thead>
+        <thead><tr><th>Name</th><th>Code</th><th>Cohort</th><th>Quota</th><th>Images</th><th>Last activity</th></tr></thead>
         <tbody id="rosterBody"></tbody>
       </table>
     </div>
@@ -159,14 +159,51 @@ async function loadRoster() {
     (data.students || []).forEach(s => {
       const tr = document.createElement("tr");
       tr.className = "student-row";
-      tr.innerHTML = `<td>${s.name}</td><td><span class="code">${s.code}</span></td><td>${s.cohort || "—"}</td><td>${s.submission_count}</td><td>${s.images_used}/10 <button type="button" class="reset-images-btn" data-code="${s.code}">reset</button></td><td>${s.last_submission ? new Date(s.last_submission).toLocaleDateString() : "—"}</td>`;
+      const limit = s.task_limit ?? 20;
+      const overQuota = s.submission_count >= limit;
+      tr.innerHTML = `<td>${s.name}</td><td><span class="code">${s.code}</span></td><td>${s.cohort || "—"}</td>
+        <td${overQuota ? ' style="color:#C84B31;font-weight:600"' : ""}>${s.submission_count}/${limit}
+          <button type="button" class="reset-images-btn add-attempts-btn" data-code="${s.code}" data-name="${escapeHtml(s.name)}">+5</button>
+          <button type="button" class="reset-images-btn set-limit-btn" data-code="${s.code}" data-name="${escapeHtml(s.name)}" data-limit="${limit}">set…</button>
+        </td>
+        <td>${s.images_used}/10 <button type="button" class="reset-images-btn" data-code="${s.code}">reset</button></td>
+        <td>${s.last_submission ? new Date(s.last_submission).toLocaleDateString() : "—"}</td>`;
       tr.addEventListener("click", () => loadHistory(s.code, s.name));
-      tr.querySelector(".reset-images-btn").addEventListener("click", async (e) => {
+      tr.querySelector(".reset-images-btn:not(.add-attempts-btn):not(.set-limit-btn)").addEventListener("click", async (e) => {
         e.stopPropagation();
         if (!confirm(`Reset ${s.name}'s image upload count back to 0?`)) return;
         try {
           const res = await fetch(`${BACKEND_URL}/admin/students/${encodeURIComponent(s.code)}/reset-images`, { method: "POST", headers: authHeaders() });
           if (!res.ok) { alert("Couldn't reset that — try again."); return; }
+          loadRoster();
+        } catch (err) {
+          alert("Couldn't reach the server: " + err.message);
+        }
+      });
+      tr.querySelector(".add-attempts-btn").addEventListener("click", async (e) => {
+        e.stopPropagation();
+        try {
+          const res = await fetch(`${BACKEND_URL}/admin/students/${encodeURIComponent(s.code)}/quota`, {
+            method: "POST", headers: authHeaders(), body: JSON.stringify({ addAttempts: 5 })
+          });
+          if (!res.ok) { alert("Couldn't update quota — try again."); return; }
+          loadRoster();
+        } catch (err) {
+          alert("Couldn't reach the server: " + err.message);
+        }
+      });
+      tr.querySelector(".set-limit-btn").addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const current = e.currentTarget.dataset.limit;
+        const input = prompt(`Set ${s.name}'s total attempt quota to:`, current);
+        if (input === null) return;
+        const taskLimit = parseInt(input, 10);
+        if (isNaN(taskLimit) || taskLimit < 0) { alert("Enter a whole number of 0 or more."); return; }
+        try {
+          const res = await fetch(`${BACKEND_URL}/admin/students/${encodeURIComponent(s.code)}/quota`, {
+            method: "POST", headers: authHeaders(), body: JSON.stringify({ taskLimit })
+          });
+          if (!res.ok) { alert("Couldn't update quota — try again."); return; }
           loadRoster();
         } catch (err) {
           alert("Couldn't reach the server: " + err.message);
