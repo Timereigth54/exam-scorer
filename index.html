@@ -306,8 +306,14 @@
 
   <section class="card" id="workspaceSection">
     <button class="secondary" id="generateBtn">Generate a practice prompt for this task</button>
-    <label for="promptText" style="margin-top:1rem">Prompt / topic</label>
-    <textarea id="promptText" class="prompt-box" placeholder="Click 'Generate a practice prompt' above, or paste your own question/topic here."></textarea>
+
+    <div id="promptWrap">
+      <label for="promptText" style="margin-top:1rem">Prompt / topic</label>
+      <textarea id="promptText" class="prompt-box" placeholder="Click 'Generate a practice prompt' above, or paste your own question/topic here."></textarea>
+    </div>
+
+    <!-- Listening tasks keep the text off screen: hearing it is the whole task. -->
+    <div id="promptHiddenNote" class="access-note" style="display:none;margin-top:1rem"></div>
 
     <div id="imageUploadWrap" style="display:none;margin-top:1rem">
       <label for="imageInput">Upload a photo (optional — if you have the real image for this task)</label>
@@ -552,9 +558,39 @@ function showTaskMeta() {
   if (t.requiresImage) {
     taskMeta.innerHTML += `<div class="image-note" style="width:100%">This task normally includes a photo. Either describe the scene in words above, or upload the real photo below if you have it.</div>`;
   }
+  applyPromptVisibility(t);
   clearImage();
   clearTimerUI();
   resetSpeakingFlow();
+}
+
+// On a listening task the prompt must not be on screen — a student who can read the
+// TOEFL repeat-sentence isn't taking a listening test. The text still travels to the
+// grader; it just never gets rendered.
+function applyPromptVisibility(t) {
+  const voice = currentSkill === "speaking" ? (t && t.voice) : null;
+  const hide = !!(voice && voice.hidden);
+  const wrap = document.getElementById("promptWrap");
+  const note = document.getElementById("promptHiddenNote");
+  const genBtn = document.getElementById("generateBtn");
+
+  wrap.style.display = hide ? "none" : "";
+  note.style.display = hide ? "" : "none";
+
+  if (hide) {
+    // Anything typed or generated for a previous task would otherwise be read aloud
+    // here, so start clean and require a fresh generation.
+    const ready = currentGeneratedTask && currentGeneratedTask.taskId === (t && t.id);
+    if (!ready) { document.getElementById("promptText").value = ""; currentGeneratedTask = null; }
+    note.textContent = ready
+      ? (voice.questions > 1
+          ? `Question set ready — ${voice.questions} questions. You'll hear them, not read them.`
+          : "Prompt ready — you'll hear it, not read it.")
+      : "This is a listening task. Generate a question set below, then press Start to hear it.";
+    genBtn.textContent = voice.questions > 1 ? "Generate a new question set" : "Generate a new spoken prompt";
+  } else {
+    genBtn.textContent = "Generate a practice prompt for this task";
+  }
 }
 
 examSelect.addEventListener("change", loadTasks);
@@ -582,6 +618,11 @@ function onSkillChange() {
     stopRecordingHardware();
     resetSpeakingFlow();
     refreshSpeakingAccess();
+  } else {
+    // Leaving speaking must not leave a question still playing, and the writing
+    // textarea has to come back regardless of what the last speaking task hid.
+    cancelSpeech();
+    applyPromptVisibility(currentTaskMeta());
   }
 }
 
@@ -720,6 +761,148 @@ let lastTranscript = "";
 
 const RECORDING_GRACE_SECONDS = 30; // matches the Worker's own per-task ceiling
 
+/* --- Spoken prompts ---------------------------------------------------
+   Several tasks are voiced in the real exam: the candidate hears the question and
+   never sees it. Audio comes from the Worker's /speak endpoint (Workers AI), with the
+   browser's own speech synthesis as a fallback so a TTS outage degrades the voice
+   rather than blocking the task. Clips are cached for the session so a replay — or a
+   second attempt at the same question set — costs nothing.                        */
+
+const ttsCache = new Map();   // text -> object URL
+let currentAudio = null;      // the <audio> currently playing, so we can cancel it
+let sequenceAbort = false;    // set when the student bails out mid-sequence
+
+function cancelSpeech() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.onended = null;
+    currentAudio.onerror = null;
+    currentAudio = null;
+  }
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+}
+
+// Browser voices load asynchronously — getVoices() is often empty on first call.
+function browserVoices() {
+  return new Promise(resolve => {
+    const existing = window.speechSynthesis.getVoices();
+    if (existing.length) { resolve(existing); return; }
+    let settled = false;
+    const done = () => { if (!settled) { settled = true; resolve(window.speechSynthesis.getVoices()); } };
+    window.speechSynthesis.addEventListener("voiceschanged", done, { once: true });
+    setTimeout(done, 1000); // some browsers never fire the event
+  });
+}
+
+async function speakWithBrowser(text) {
+  if (!("speechSynthesis" in window)) return false;
+  let voices = [];
+  try { voices = await browserVoices(); } catch (_) { /* pick the default voice */ }
+  return new Promise(resolve => {
+    // This is the last line of defence — it runs when Workers AI is unavailable. If it
+    // throws, a sequenced task would die halfway through with the mic still open, so
+    // every step here fails soft and resolves rather than rejecting.
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      // Prefer the OS "natural/neural" voices where they exist — the difference between
+      // those and the legacy formant voices is the difference between an examiner and a
+      // satnav. Falls back through British English, then any English.
+      const preferred =
+        voices.find(v => /^en/i.test(v.lang) && /natural|neural|premium|enhanced|online/i.test(v.name)) ||
+        voices.find(v => /^en-GB/i.test(v.lang)) ||
+        voices.find(v => /^en/i.test(v.lang));
+      if (preferred) {
+        try { u.voice = preferred; } catch (_) { /* keep the platform default */ }
+        if (preferred.lang) u.lang = preferred.lang;
+      } else {
+        u.lang = "en-GB";
+      }
+      u.rate = 0.95; // examiners don't rush
+      u.onend = () => resolve(true);
+      u.onerror = () => resolve(false);
+      // Some browsers silently drop long utterances; don't hang the sequence on it.
+      const guard = setTimeout(() => resolve(false), Math.max(8000, text.length * 120));
+      const done = u.onend;
+      u.onend = () => { clearTimeout(guard); done(); };
+      window.speechSynthesis.speak(u);
+    } catch (_) {
+      resolve(false);
+    }
+  });
+}
+
+// Resolves once the line has finished being spoken, however that happened.
+async function speakLine(text) {
+  if (!text || !text.trim()) return;
+  const code = studentCodeInput.value.trim();
+  let url = ttsCache.get(text);
+
+  if (!url) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/speak`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentCode: code, examKey: examSelect.value,
+          skill: "speaking", taskId: taskSelect.value, text,
+        })
+      });
+      const data = await res.json();
+      if (data.code === "SPEAKING_NOT_SUBSCRIBED") {
+        speakingAccess = { hasAccess: false };
+        showPaywall(data.error);
+        throw new Error("not subscribed");
+      }
+      if (res.ok && data.audioBase64) {
+        const bytes = Uint8Array.from(atob(data.audioBase64), c => c.charCodeAt(0));
+        url = URL.createObjectURL(new Blob([bytes], { type: data.mimeType || "audio/mpeg" }));
+        ttsCache.set(text, url);
+      }
+    } catch (e) {
+      if (e.message === "not subscribed") throw e;
+      /* fall through to the browser voice */
+    }
+  }
+
+  if (!url) { await speakWithBrowser(text); return; }
+
+  await new Promise(resolve => {
+    const audio = new Audio(url);
+    currentAudio = audio;
+    audio.onended = () => { currentAudio = null; resolve(); };
+    audio.onerror = async () => { currentAudio = null; await speakWithBrowser(text); resolve(); };
+    audio.play().catch(async () => {
+      // Autoplay policies block audio that isn't tied to a user gesture. Every path
+      // here starts from a button press, but if it's blocked anyway, don't hang.
+      currentAudio = null;
+      await speakWithBrowser(text);
+      resolve();
+    });
+  });
+}
+
+function currentVoice() {
+  const t = currentTaskMeta();
+  return (t && t.voice) || null;
+}
+
+// The lines to speak: the generated question array for a sequenced task, otherwise
+// whatever is in the prompt box as a single line.
+function linesToSpeak() {
+  const voice = currentVoice();
+  if (!voice) return [];
+  if (voice.questions > 1) {
+    const generated = currentGeneratedTask && Array.isArray(currentGeneratedTask.questions)
+      ? currentGeneratedTask.questions
+      : null;
+    if (generated && generated.length) return generated;
+    // Fall back to splitting the prompt box, so a pasted-in set still works.
+    return document.getElementById("promptText").value.split(/\n+/).map(s => s.trim()).filter(Boolean);
+  }
+  const single = document.getElementById("promptText").value.trim();
+  return single ? [single] : [];
+}
+
 const recPhaseEl = document.getElementById("recPhase");
 const recClockEl = document.getElementById("recClock");
 const recSubEl = document.getElementById("recSub");
@@ -830,6 +1013,8 @@ function stopRecordingHardware() {
 
 function resetSpeakingFlow() {
   stopRecordingHardware();
+  cancelSpeech();
+  sequenceAbort = false;
   speakingPhase = "idle";
   recordedChunks = [];
   recordedBlob = null;
@@ -858,16 +1043,137 @@ function renderIdlePhase() {
   }
   const prep = t.prepMinutes || 0;
   const resp = t.responseMinutes || t.timeLimit || 1;
+  const voice = t.voice;
+
+  // Listening tasks: the student never sees the text, so the panel has to explain
+  // what's about to happen instead of showing it.
+  if (voice && voice.hidden) {
+    const lines = linesToSpeak();
+    const ready = lines.length > 0;
+    recPhaseEl.textContent = "Ready to listen";
+    recClockEl.textContent = fmtClock(voice.questions * voice.gapSeconds || resp * 60);
+    recSubEl.textContent = !ready
+      ? "Generate a question set above first — you'll hear the questions, not read them."
+      : voice.questions > 1
+        ? `You'll hear ${voice.questions} questions, one at a time, with ${formatDuration(voice.gapSeconds / 60)} to answer each. Recording pauses while each question plays. Headphones recommended.`
+        : `You'll hear the prompt once, then have ${formatDuration(voice.gapSeconds / 60)} to answer. Headphones recommended.`;
+    setRecActions(ready ? [{ label: "Start", className: "primary", onClick: runVoicedTask }] : []);
+    return;
+  }
+
   recPhaseEl.textContent = "Ready";
   recClockEl.textContent = fmtClock(resp * 60);
   recSubEl.textContent = prep > 0
     ? `${formatDuration(prep)} to prepare, then ${formatDuration(resp)} to speak.`
     : `${formatDuration(resp)} to speak — recording starts straight away.`;
-  setRecActions([
+
+  const actions = [
     prep > 0
       ? { label: "Start preparation", className: "primary", onClick: startPrepPhase }
       : { label: "Start recording", className: "primary", onClick: startRecordingPhase },
-  ]);
+  ];
+  // Tasks where the examiner reads the card aloud but the candidate can also see it.
+  if (voice && !voice.hidden && linesToSpeak().length) {
+    actions.push({
+      label: "Hear it read aloud",
+      className: "secondary",
+      onClick: async (e) => {
+        showRecError("");
+        try { await speakLine(linesToSpeak()[0]); } catch (_) { /* paywall already shown */ }
+      },
+    });
+  }
+  setRecActions(actions);
+}
+
+// Runs a voiced task the way the exam tape does: play a question, give a fixed
+// answering slot, move on. The recorder is PAUSED while each question plays, so the
+// synthesised voice never ends up in the student's own transcript — which also means
+// the answers arrive as one clean run of speech for the grader to segment.
+async function runVoicedTask() {
+  const t = currentTaskMeta();
+  const voice = t && t.voice;
+  if (!t || !voice) return;
+  const lines = linesToSpeak();
+  if (!lines.length) { showRecError("Generate a question set first."); return; }
+
+  showRecError("");
+  sequenceAbort = false;
+  recMeterEl.style.display = "none";
+  recPlaybackEl.style.display = "none";
+
+  const started = await beginRecording({ paused: true });
+  if (!started) return;
+
+  speakingPhase = "recording";
+  setRecActions([{
+    label: "Stop and finish",
+    className: "secondary",
+    onClick: () => { sequenceAbort = true; cancelSpeech(); stopRecording(); },
+  }]);
+
+  const canPause = mediaRecorder && typeof mediaRecorder.pause === "function" && typeof mediaRecorder.resume === "function";
+
+  try {
+    for (let i = 0; i < lines.length; i++) {
+      if (sequenceAbort) break;
+
+      // --- question plays, recorder held ---
+      recPhaseEl.textContent = lines.length > 1 ? `Question ${i + 1} of ${lines.length}` : "Listen";
+      recSubEl.textContent = "Listen carefully.";
+      recClockEl.textContent = "· · ·";
+      recClockEl.classList.remove("warning");
+      try {
+        await speakLine(lines[i]);
+      } catch (_) {
+        // Subscription lapsed mid-sequence; the paywall is already showing.
+        stopRecordingHardware();
+        return;
+      }
+      if (sequenceAbort) break;
+
+      // --- answering slot, recorder live ---
+      if (canPause && mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
+      recordingStartedAt = recordingStartedAt || Date.now();
+      const slot = voice.gapSeconds || Math.round((t.responseMinutes || 1) * 60);
+      await runAnswerSlot(slot, i + 1, lines.length);
+      if (canPause && mediaRecorder && mediaRecorder.state === "recording" && i < lines.length - 1) {
+        mediaRecorder.pause();
+      }
+    }
+  } finally {
+    if (!sequenceAbort) {
+      recSubEl.textContent = "That's the last question — wrapping up.";
+    }
+    stopRecording();
+  }
+}
+
+// One fixed answering window. Resolves when it elapses, or early if the student
+// presses Stop.
+function runAnswerSlot(seconds, index, total) {
+  return new Promise(resolve => {
+    let remaining = seconds;
+    recPhaseEl.innerHTML = '<span class="rec-live"><span class="rec-dot"></span>Answer now</span>';
+    recSubEl.textContent = total > 1 ? `Answer ${index} of ${total}.` : "Speak your answer.";
+    recMeterEl.style.display = "";
+    recClockEl.textContent = fmtClock(remaining);
+
+    if (phaseInterval) clearInterval(phaseInterval);
+    phaseInterval = setInterval(() => {
+      if (sequenceAbort) { clearInterval(phaseInterval); phaseInterval = null; resolve(); return; }
+      remaining--;
+      recClockEl.textContent = fmtClock(remaining);
+      recMeterFillEl.style.width = `${Math.min(100, ((seconds - remaining) / seconds) * 100)}%`;
+      if (remaining <= 5) recClockEl.classList.add("warning");
+      if (remaining <= 0) {
+        clearInterval(phaseInterval);
+        phaseInterval = null;
+        recClockEl.classList.remove("warning");
+        resolve();
+      }
+    }, 1000);
+  });
 }
 
 function startPrepPhase() {
@@ -898,9 +1204,10 @@ function startPrepPhase() {
   }, 1000);
 }
 
-async function startRecordingPhase() {
-  const t = currentTaskMeta();
-  if (!t) return;
+// Opens the mic and starts a recorder. Shared by the free-form flow and the voiced
+// sequencer; the latter starts it paused so nothing is captured before question one.
+// Returns true if recording is live.
+async function beginRecording({ paused = false } = {}) {
   if (phaseInterval) { clearInterval(phaseInterval); phaseInterval = null; }
   showRecError("");
 
@@ -908,12 +1215,17 @@ async function startRecordingPhase() {
     showRecError("This browser can't record audio. Try the latest Chrome, Edge, Firefox, or Safari — and note that recording only works over https.");
     speakingPhase = "idle";
     renderIdlePhase();
-    return;
+    return false;
   }
 
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Echo cancellation matters here: on a voiced task the question is coming out of
+    // the speakers while the mic is open. The recorder is paused during playback so it
+    // shouldn't matter, but a student on speakers with a slow pause is still covered.
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
   } catch (err) {
     const denied = err && (err.name === "NotAllowedError" || err.name === "SecurityError");
     const missing = err && (err.name === "NotFoundError" || err.name === "DevicesNotFoundError");
@@ -924,7 +1236,7 @@ async function startRecordingPhase() {
     );
     speakingPhase = "idle";
     renderIdlePhase();
-    return;
+    return false;
   }
 
   mediaStream = stream;
@@ -944,7 +1256,7 @@ async function startRecordingPhase() {
       stopRecordingHardware();
       speakingPhase = "idle";
       renderIdlePhase();
-      return;
+      return false;
     }
   }
 
@@ -954,11 +1266,27 @@ async function startRecordingPhase() {
   });
   mediaRecorder.addEventListener("stop", onRecordingStopped);
 
-  speakingPhase = "recording";
   recordingStartedAt = Date.now();
-  const maxSeconds = Math.round((t.responseMinutes || t.timeLimit || 1) * 60);
-
   mediaRecorder.start();
+
+  // The sequencer opens the mic before the first question is spoken, then holds it
+  // until the answering slot. Browsers without pause() just record continuously —
+  // echo cancellation and the headphone hint carry that case.
+  if (paused && typeof mediaRecorder.pause === "function") {
+    try { mediaRecorder.pause(); } catch (e) { /* record straight through */ }
+  }
+  return true;
+}
+
+async function startRecordingPhase() {
+  const t = currentTaskMeta();
+  if (!t) return;
+
+  const started = await beginRecording({ paused: false });
+  if (!started) return;
+
+  speakingPhase = "recording";
+  const maxSeconds = Math.round((t.responseMinutes || t.timeLimit || 1) * 60);
 
   recPhaseEl.innerHTML = '<span class="rec-live"><span class="rec-dot"></span>Recording</span>';
   recSubEl.textContent = `Speak now — recording stops automatically at ${formatDuration(maxSeconds / 60)}.`;
@@ -1138,8 +1466,18 @@ async function generateTask() {
     });
     const data = await res.json();
     if (data.error) { alert(data.error); return; }
+
+    // New prompt text means the cached clips are dead weight — free the object URLs
+    // rather than leaking one per generation.
+    ttsCache.forEach(url => URL.revokeObjectURL(url));
+    ttsCache.clear();
+
     currentGeneratedTask = data;
     document.getElementById("promptText").value = data.content;
+    if (currentSkill === "speaking") {
+      applyPromptVisibility(currentTaskMeta());
+      resetSpeakingFlow(); // re-renders the panel so Start appears now there's something to say
+    }
   } catch (e) {
     alert("Couldn't generate a task: " + e.message);
   } finally {
