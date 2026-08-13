@@ -75,8 +75,6 @@
     font-size:.9rem;font-weight:600;cursor:pointer;
   }
   .pill.active{background:var(--stamp-teal-bg);color:var(--stamp-teal);border-color:var(--stamp-teal);}
-  .pill.disabled{opacity:.55;cursor:not-allowed;display:flex;align-items:center;justify-content:center;gap:.35rem;}
-  .soon-badge{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;background:var(--ink-faint);color:#fff;border-radius:5px;padding:.1rem .35rem;}
   .prompt-box{min-height:90px;background:var(--paper);font-style:italic;}
   input[type=file]{
     width:100%;padding:.6rem;border:1px dashed var(--paper-line);border-radius:10px;
@@ -214,6 +212,60 @@
     background:var(--stamp-teal-bg);border-left:3px solid var(--stamp-teal);
     border-radius:8px;padding:.9rem 1rem;white-space:pre-wrap;
   }
+
+  /* --- Speaking ------------------------------------------------------- */
+  .rec-panel{
+    margin-top:1rem;border:1px solid var(--paper-line);border-radius:10px;
+    padding:1.1rem;background:var(--paper);text-align:center;
+  }
+  .rec-phase{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);}
+  .rec-clock{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:2.1rem;font-weight:700;
+    color:var(--ink);margin:.35rem 0 .15rem;line-height:1;
+  }
+  .rec-clock.warning{color:var(--mark-red);}
+  .rec-sub{font-size:.8rem;color:var(--ink-faint);margin-bottom:.9rem;}
+  .rec-actions{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;}
+  .rec-actions button{width:auto;min-width:150px;}
+  .rec-live{display:inline-flex;align-items:center;gap:.45rem;color:var(--mark-red);font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;}
+  .rec-dot{width:11px;height:11px;border-radius:50%;background:var(--mark-red);animation:recpulse 1.1s ease-in-out infinite;}
+  @keyframes recpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.8);}}
+  @media (prefers-reduced-motion:reduce){
+    .rec-dot{animation:none;}
+    .spinner{animation:none;}
+  }
+  .rec-meter{height:6px;background:var(--paper-line);border-radius:6px;overflow:hidden;margin:.75rem auto 0;max-width:320px;}
+  .rec-meter-fill{height:100%;background:var(--mark-red);border-radius:6px;width:0%;transition:width .25s linear;}
+  .rec-error{
+    margin-top:.7rem;font-size:.83rem;color:var(--mark-red);
+    background:var(--mark-red-bg);border-radius:8px;padding:.55rem .75rem;text-align:left;
+  }
+  audio{width:100%;margin-top:.5rem;}
+
+  .transcript-box{
+    margin-top:1rem;background:#fff;border:1px solid var(--paper-line);
+    border-radius:10px;padding:.9rem 1rem;
+  }
+  .transcript-box h4{
+    font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
+    color:var(--ink-soft);margin:0 0 .4rem;font-family:inherit;
+  }
+  .transcript-text{
+    font-size:.93rem;line-height:1.6;color:var(--ink);white-space:pre-wrap;
+    background:var(--paper);border-radius:8px;padding:.7rem .85rem;max-height:220px;overflow-y:auto;
+  }
+
+  .paywall{
+    margin-top:1rem;border:1px solid var(--seal-gold);background:var(--seal-gold-bg);
+    border-radius:10px;padding:1.25rem;text-align:center;
+  }
+  .paywall h3{font-size:1.05rem;color:var(--seal-gold);margin-bottom:.4rem;}
+  .paywall p{font-size:.9rem;color:var(--ink);margin:.35rem 0;line-height:1.55;}
+  .paywall button{width:auto;min-width:180px;margin-top:.75rem;}
+  .access-note{
+    margin-top:.6rem;font-size:.8rem;color:var(--stamp-teal);
+    background:var(--stamp-teal-bg);border-radius:8px;padding:.45rem .7rem;text-align:center;
+  }
 </style>
 </head>
 <body>
@@ -241,7 +293,7 @@
         <label>Skill</label>
         <div class="pillgroup">
           <button type="button" class="pill active" data-skill="writing">Writing</button>
-          <button type="button" class="pill disabled" data-skill="speaking" disabled>Speaking <span class="soon-badge">soon</span></button>
+          <button type="button" class="pill" data-skill="speaking">Speaking</button>
         </div>
       </div>
       <div>
@@ -266,15 +318,50 @@
       </div>
     </div>
 
-    <div class="timer-row">
-      <button type="button" class="secondary" id="startTimerBtn">Start timer</button>
-      <span class="timer-display" id="timerDisplay"></span>
+    <!-- Writing: unchanged textarea flow. -->
+    <div id="writingPane">
+      <div class="timer-row">
+        <button type="button" class="secondary" id="startTimerBtn">Start timer</button>
+        <span class="timer-display" id="timerDisplay"></span>
+      </div>
+
+      <label for="essayText" style="margin-top:1rem">Your response</label>
+      <textarea id="essayText" placeholder="Write or paste your response here."></textarea>
+      <div class="wordcount"><span id="wordCount">0 words</span></div>
+      <button class="primary" id="gradeBtn">Grade my work</button>
     </div>
 
-    <label for="essayText" style="margin-top:1rem">Your response</label>
-    <textarea id="essayText" placeholder="Write or paste your response here."></textarea>
-    <div class="wordcount"><span id="wordCount">0 words</span></div>
-    <button class="primary" id="gradeBtn">Grade my work</button>
+    <!-- Speaking: recording flow, swapped in by the skill pills. -->
+    <div id="speakingPane" style="display:none">
+
+      <div class="paywall" id="speakingPaywall" style="display:none">
+        <h3>Speaking practice is a paid feature</h3>
+        <p>Writing practice stays free and unlimited. Speaking adds recording, transcription, and examiner-style feedback on your spoken responses.</p>
+        <p id="paywallReason">Ask your teacher to activate speaking for your account.</p>
+        <button type="button" class="primary" id="subscribeBtn" style="display:none">Subscribe</button>
+      </div>
+
+      <div id="speakingWorkspace" style="display:none">
+        <div class="access-note" id="accessNote" style="display:none"></div>
+
+        <div class="rec-panel" id="recPanel">
+          <div class="rec-phase" id="recPhase">Ready</div>
+          <div class="rec-clock" id="recClock">0:00</div>
+          <div class="rec-sub" id="recSub"></div>
+          <div class="rec-meter" id="recMeter" style="display:none"><div class="rec-meter-fill" id="recMeterFill"></div></div>
+          <div class="rec-actions" id="recActions"></div>
+          <audio id="recPlayback" controls style="display:none"></audio>
+          <div class="rec-error" id="recError" style="display:none"></div>
+        </div>
+
+        <div class="transcript-box" id="transcriptBox" style="display:none">
+          <h4>What we heard — check this before grading</h4>
+          <div class="transcript-text" id="transcriptText"></div>
+          <p class="hint">Transcription isn't perfect. A few wrong words won't change your score much — grading looks at your ideas, grammar, and fluency, not at individual transcription slips. Re-record if whole sentences are missing or garbled.</p>
+          <button class="primary" id="gradeTranscriptBtn" style="margin-top:.75rem">Grade this transcript</button>
+        </div>
+      </div>
+    </div>
   </section>
 
 
@@ -353,6 +440,11 @@
 // *** UPDATE THIS after deploying the Worker (see README) — trailing slash is fine, it gets stripped automatically ***
 const BACKEND_URL = "https://exam-scorer.kayuso2011.workers.dev/".replace(/\/+$/, "");
 
+// *** Set this once YooKassa is live — the checkout link students are sent to. ***
+// Left empty until then, which hides the Subscribe button and leaves the paywall
+// telling students to contact their teacher instead.
+const SPEAKING_PAYMENT_URL = "";
+
 const EXAM_GROUPS = [
   { label: "International", exams: ["ielts", "toefl", "det"] },
   { label: "Cambridge", exams: ["fce", "cae", "cpe", "pet", "ket"] },
@@ -378,6 +470,10 @@ const studentCodeInput = document.getElementById("studentCode");
 studentCodeInput.value = localStorage.getItem("examPrepStudentCode") || "";
 studentCodeInput.addEventListener("change", () => {
   localStorage.setItem("examPrepStudentCode", studentCodeInput.value.trim());
+  // A different code may have different speaking access, so re-check rather than
+  // leaving a stale paywall (or a stale unlocked state) on screen.
+  speakingAccess = null;
+  if (currentSkill === "speaking") refreshSpeakingAccess();
 });
 
 function populateExamSelect(labels) {
@@ -425,13 +521,32 @@ async function loadTasks() {
   }
 }
 
-function showTaskMeta() {
+function currentTaskMeta() {
   const opt = taskSelect.options[taskSelect.selectedIndex];
-  if (!opt || !opt.dataset.meta) { taskMeta.innerHTML = ""; document.getElementById("imageUploadWrap").style.display = "none"; clearTimerUI(); return; }
-  const t = JSON.parse(opt.dataset.meta);
+  if (!opt || !opt.dataset.meta) return null;
+  try { return JSON.parse(opt.dataset.meta); } catch (e) { return null; }
+}
+
+// Formats fractional minutes the way a student reads a clock: 0.58 min -> "35 sec".
+function formatDuration(minutes) {
+  const secs = Math.round(minutes * 60);
+  if (secs < 60) return `${secs} sec`;
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return s ? `${m} min ${s} sec` : `${m} min`;
+}
+
+function showTaskMeta() {
+  const t = currentTaskMeta();
+  if (!t) { taskMeta.innerHTML = ""; document.getElementById("imageUploadWrap").style.display = "none"; clearTimerUI(); resetSpeakingFlow(); return; }
   let html = "";
   if (t.wordLimit) html += `<span>~${t.wordLimit} words</span>`;
-  if (t.timeLimit) html += `<span>${t.timeLimit} min</span>`;
+  if (currentSkill === "speaking" && t.responseMinutes != null) {
+    if (t.prepMinutes) html += `<span>${formatDuration(t.prepMinutes)} prep</span>`;
+    html += `<span>${formatDuration(t.responseMinutes)} speaking</span>`;
+  } else if (t.timeLimit) {
+    html += `<span>${t.timeLimit} min</span>`;
+  }
   taskMeta.innerHTML = html;
   document.getElementById("imageUploadWrap").style.display = t.requiresImage ? "" : "none";
   if (t.requiresImage) {
@@ -439,6 +554,7 @@ function showTaskMeta() {
   }
   clearImage();
   clearTimerUI();
+  resetSpeakingFlow();
 }
 
 examSelect.addEventListener("change", loadTasks);
@@ -446,12 +562,28 @@ taskSelect.addEventListener("change", showTaskMeta);
 
 document.querySelectorAll(".pill").forEach(p => {
   p.addEventListener("click", () => {
+    if (p.dataset.skill === currentSkill) return;
     document.querySelectorAll(".pill").forEach(x => x.classList.remove("active"));
     p.classList.add("active");
     currentSkill = p.dataset.skill;
+    onSkillChange();
     loadTasks();
   });
 });
+
+// Swaps the workspace between the textarea (writing) and the recorder (speaking).
+// The writing flow is left completely untouched — it's simply hidden.
+function onSkillChange() {
+  const speaking = currentSkill === "speaking";
+  document.getElementById("writingPane").style.display = speaking ? "none" : "";
+  document.getElementById("speakingPane").style.display = speaking ? "" : "none";
+  document.getElementById("results").classList.remove("visible");
+  if (speaking) {
+    stopRecordingHardware();
+    resetSpeakingFlow();
+    refreshSpeakingAccess();
+  }
+}
 
 function wireWordCount(textareaId, countId) {
   const ta = document.getElementById(textareaId);
@@ -572,6 +704,428 @@ function setLoading(on, text) {
   if (text) document.getElementById("loadingText").textContent = text;
 }
 
+/* ===================== Speaking ======================================= */
+
+let speakingAccess = null;      // null = not checked yet
+let speakingPhase = "idle";     // idle | prep | recording | review | transcribed
+let mediaRecorder = null;
+let mediaStream = null;
+let recordedChunks = [];
+let recordedBlob = null;
+let recordedSeconds = 0;
+let recordingStartedAt = 0;
+let phaseInterval = null;
+let playbackUrl = null;
+let lastTranscript = "";
+
+const RECORDING_GRACE_SECONDS = 30; // matches the Worker's own per-task ceiling
+
+const recPhaseEl = document.getElementById("recPhase");
+const recClockEl = document.getElementById("recClock");
+const recSubEl = document.getElementById("recSub");
+const recActionsEl = document.getElementById("recActions");
+const recErrorEl = document.getElementById("recError");
+const recMeterEl = document.getElementById("recMeter");
+const recMeterFillEl = document.getElementById("recMeterFill");
+const recPlaybackEl = document.getElementById("recPlayback");
+
+function fmtClock(totalSeconds) {
+  const s = Math.max(0, Math.round(totalSeconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function showRecError(msg) {
+  recErrorEl.textContent = msg;
+  recErrorEl.style.display = msg ? "" : "none";
+}
+
+// Buttons are rebuilt per phase rather than shown/hidden, so a stale handler from a
+// previous phase can never fire against the current one.
+function setRecActions(buttons) {
+  recActionsEl.innerHTML = "";
+  buttons.forEach(({ label, className, onClick }) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = className || "secondary";
+    b.textContent = label;
+    b.addEventListener("click", onClick);
+    recActionsEl.appendChild(b);
+  });
+}
+
+// --- Access ---------------------------------------------------------------
+
+function showPaywall(reasonText) {
+  document.getElementById("speakingPaywall").style.display = "";
+  document.getElementById("speakingWorkspace").style.display = "none";
+  document.getElementById("paywallReason").textContent =
+    reasonText || "Ask your teacher to activate speaking for your account.";
+  const btn = document.getElementById("subscribeBtn");
+  btn.style.display = SPEAKING_PAYMENT_URL ? "" : "none";
+}
+
+function showSpeakingWorkspace() {
+  document.getElementById("speakingPaywall").style.display = "none";
+  document.getElementById("speakingWorkspace").style.display = "";
+}
+
+function renderAccessNote() {
+  const note = document.getElementById("accessNote");
+  if (!speakingAccess || !speakingAccess.hasAccess) { note.style.display = "none"; return; }
+  const parts = [];
+  parts.push(speakingAccess.expiresAt
+    ? `Speaking active until ${new Date(speakingAccess.expiresAt).toLocaleDateString()}`
+    : "Speaking active");
+  if (typeof speakingAccess.secondsUsed === "number" && typeof speakingAccess.secondsLimit === "number") {
+    const left = Math.max(0, speakingAccess.secondsLimit - speakingAccess.secondsUsed);
+    parts.push(`${formatDuration(left / 60)} of recording left`);
+  }
+  note.textContent = parts.join(" · ");
+  note.style.display = "";
+}
+
+async function refreshSpeakingAccess() {
+  const code = studentCodeInput.value.trim();
+  if (!code) {
+    showPaywall("Enter your student code above to check your speaking access.");
+    return;
+  }
+  try {
+    const res = await fetch(`${BACKEND_URL}/student/${encodeURIComponent(code)}/speaking-access`);
+    const data = await res.json();
+    speakingAccess = data;
+    if (data.hasAccess) {
+      showSpeakingWorkspace();
+      renderAccessNote();
+      resetSpeakingFlow();
+    } else {
+      showPaywall();
+    }
+  } catch (e) {
+    // Network trouble shouldn't masquerade as "you haven't paid" — say what actually
+    // happened. The Worker enforces the paywall regardless of what this check shows.
+    showPaywall("We couldn't check your subscription just now — check your connection and try again.");
+  }
+}
+
+document.getElementById("subscribeBtn").addEventListener("click", () => {
+  if (SPEAKING_PAYMENT_URL) window.open(SPEAKING_PAYMENT_URL, "_blank", "noopener");
+});
+
+// --- Recorder lifecycle ---------------------------------------------------
+
+function stopRecordingHardware() {
+  if (phaseInterval) { clearInterval(phaseInterval); phaseInterval = null; }
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    try { mediaRecorder.stop(); } catch (e) { /* already stopping */ }
+  }
+  mediaRecorder = null;
+  // Releasing the tracks is what turns the browser's recording indicator off — without
+  // this the mic stays visibly live after the student has finished.
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+  }
+}
+
+function resetSpeakingFlow() {
+  stopRecordingHardware();
+  speakingPhase = "idle";
+  recordedChunks = [];
+  recordedBlob = null;
+  recordedSeconds = 0;
+  lastTranscript = "";
+  if (playbackUrl) { URL.revokeObjectURL(playbackUrl); playbackUrl = null; }
+  recPlaybackEl.style.display = "none";
+  recPlaybackEl.removeAttribute("src");
+  recMeterEl.style.display = "none";
+  recMeterFillEl.style.width = "0%";
+  recClockEl.classList.remove("warning");
+  document.getElementById("transcriptBox").style.display = "none";
+  document.getElementById("transcriptText").textContent = "";
+  showRecError("");
+  renderIdlePhase();
+}
+
+function renderIdlePhase() {
+  const t = currentTaskMeta();
+  if (!t) {
+    recPhaseEl.textContent = "No task selected";
+    recClockEl.textContent = "0:00";
+    recSubEl.textContent = "";
+    setRecActions([]);
+    return;
+  }
+  const prep = t.prepMinutes || 0;
+  const resp = t.responseMinutes || t.timeLimit || 1;
+  recPhaseEl.textContent = "Ready";
+  recClockEl.textContent = fmtClock(resp * 60);
+  recSubEl.textContent = prep > 0
+    ? `${formatDuration(prep)} to prepare, then ${formatDuration(resp)} to speak.`
+    : `${formatDuration(resp)} to speak — recording starts straight away.`;
+  setRecActions([
+    prep > 0
+      ? { label: "Start preparation", className: "primary", onClick: startPrepPhase }
+      : { label: "Start recording", className: "primary", onClick: startRecordingPhase },
+  ]);
+}
+
+function startPrepPhase() {
+  const t = currentTaskMeta();
+  if (!t) return;
+  showRecError("");
+  speakingPhase = "prep";
+  let remaining = Math.round((t.prepMinutes || 0) * 60);
+
+  recPhaseEl.textContent = "Preparation time";
+  recSubEl.textContent = "Read the prompt and plan your answer. Nothing is being recorded yet.";
+  recClockEl.textContent = fmtClock(remaining);
+  recClockEl.classList.remove("warning");
+  setRecActions([
+    { label: "Skip prep, start recording", className: "primary", onClick: startRecordingPhase },
+  ]);
+
+  if (phaseInterval) clearInterval(phaseInterval);
+  phaseInterval = setInterval(() => {
+    remaining--;
+    recClockEl.textContent = fmtClock(remaining);
+    if (remaining <= 5) recClockEl.classList.add("warning");
+    if (remaining <= 0) {
+      clearInterval(phaseInterval);
+      phaseInterval = null;
+      startRecordingPhase();
+    }
+  }, 1000);
+}
+
+async function startRecordingPhase() {
+  const t = currentTaskMeta();
+  if (!t) return;
+  if (phaseInterval) { clearInterval(phaseInterval); phaseInterval = null; }
+  showRecError("");
+
+  if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function" || typeof MediaRecorder === "undefined") {
+    showRecError("This browser can't record audio. Try the latest Chrome, Edge, Firefox, or Safari — and note that recording only works over https.");
+    speakingPhase = "idle";
+    renderIdlePhase();
+    return;
+  }
+
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    const denied = err && (err.name === "NotAllowedError" || err.name === "SecurityError");
+    const missing = err && (err.name === "NotFoundError" || err.name === "DevicesNotFoundError");
+    showRecError(
+      denied ? "Microphone access was blocked. Allow microphone access for this site in your browser settings, then try again."
+        : missing ? "No microphone was found. Plug one in or check your system sound settings, then try again."
+        : "Couldn't start the microphone: " + ((err && err.message) || "unknown error")
+    );
+    speakingPhase = "idle";
+    renderIdlePhase();
+    return;
+  }
+
+  mediaStream = stream;
+  // Chrome and Firefox record webm; Safari only does mp4. Both are accepted by Whisper.
+  const mimeType = (typeof MediaRecorder.isTypeSupported === "function" && MediaRecorder.isTypeSupported("audio/webm"))
+    ? "audio/webm"
+    : "audio/mp4";
+  try {
+    mediaRecorder = new MediaRecorder(stream, { mimeType });
+  } catch (e) {
+    // Some builds reject an explicit mimeType even when isTypeSupported said yes;
+    // letting the browser pick its own default is better than failing outright.
+    try {
+      mediaRecorder = new MediaRecorder(stream);
+    } catch (e2) {
+      showRecError("This browser couldn't start a recording: " + e2.message);
+      stopRecordingHardware();
+      speakingPhase = "idle";
+      renderIdlePhase();
+      return;
+    }
+  }
+
+  recordedChunks = [];
+  mediaRecorder.addEventListener("dataavailable", (e) => {
+    if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+  });
+  mediaRecorder.addEventListener("stop", onRecordingStopped);
+
+  speakingPhase = "recording";
+  recordingStartedAt = Date.now();
+  const maxSeconds = Math.round((t.responseMinutes || t.timeLimit || 1) * 60);
+
+  mediaRecorder.start();
+
+  recPhaseEl.innerHTML = '<span class="rec-live"><span class="rec-dot"></span>Recording</span>';
+  recSubEl.textContent = `Speak now — recording stops automatically at ${formatDuration(maxSeconds / 60)}.`;
+  recClockEl.textContent = "0:00";
+  recClockEl.classList.remove("warning");
+  recMeterEl.style.display = "";
+  recMeterFillEl.style.width = "0%";
+  setRecActions([{ label: "Stop", className: "primary", onClick: () => stopRecording() }]);
+
+  phaseInterval = setInterval(() => {
+    const elapsed = (Date.now() - recordingStartedAt) / 1000;
+    recClockEl.textContent = fmtClock(elapsed);
+    recMeterFillEl.style.width = `${Math.min(100, (elapsed / maxSeconds) * 100)}%`;
+    if (elapsed >= maxSeconds * 0.85) recClockEl.classList.add("warning");
+    if (elapsed >= maxSeconds) stopRecording(true);
+  }, 200);
+}
+
+function stopRecording(auto = false) {
+  if (phaseInterval) { clearInterval(phaseInterval); phaseInterval = null; }
+  recordedSeconds = (Date.now() - recordingStartedAt) / 1000;
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    try { mediaRecorder.stop(); } catch (e) { /* fall through to onRecordingStopped */ }
+  }
+  if (auto) recSubEl.textContent = "Time's up — recording stopped automatically.";
+}
+
+function onRecordingStopped() {
+  // Release the mic as soon as the data is captured, but keep the blob.
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+  }
+
+  const type = (mediaRecorder && mediaRecorder.mimeType) || "audio/webm";
+  recordedBlob = new Blob(recordedChunks, { type });
+  mediaRecorder = null;
+
+  if (!recordedBlob.size) {
+    showRecError("That recording came out empty. Check your microphone and try again.");
+    speakingPhase = "idle";
+    renderIdlePhase();
+    return;
+  }
+
+  speakingPhase = "review";
+  if (playbackUrl) URL.revokeObjectURL(playbackUrl);
+  playbackUrl = URL.createObjectURL(recordedBlob);
+  recPlaybackEl.src = playbackUrl;
+  recPlaybackEl.style.display = "";
+
+  recPhaseEl.textContent = "Listen back";
+  recClockEl.textContent = fmtClock(recordedSeconds);
+  recSubEl.textContent = "Happy with it? Send it for transcription. Otherwise record again.";
+  recMeterEl.style.display = "none";
+  recClockEl.classList.remove("warning");
+  setRecActions([
+    { label: "Submit for grading", className: "primary", onClick: submitForTranscription },
+    { label: "Re-record", className: "secondary", onClick: () => { resetSpeakingFlow(); startRecordingPhase(); } },
+  ]);
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      const comma = result.indexOf(",");
+      if (comma === -1) { reject(new Error("Couldn't encode the recording")); return; }
+      resolve(result.slice(comma + 1));
+    };
+    reader.onerror = () => reject(new Error("Couldn't read the recording"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function submitForTranscription() {
+  const code = studentCodeInput.value.trim();
+  const t = currentTaskMeta();
+  if (!code) { alert("Enter your student code first."); return; }
+  if (!recordedBlob || !t) return;
+
+  const maxSeconds = Math.round((t.responseMinutes || t.timeLimit || 1) * 60) + RECORDING_GRACE_SECONDS;
+  if (recordedSeconds > maxSeconds) {
+    showRecError(`That recording is ${fmtClock(recordedSeconds)} long, but this task allows at most ${fmtClock(maxSeconds)}. Please record a shorter answer.`);
+    return;
+  }
+  // The Worker enforces its own ceiling too; catching it here saves the upload.
+  if (recordedBlob.size > 6 * 1024 * 1024) {
+    showRecError("That recording is too large to send (limit is 6 MB). Please record a shorter answer.");
+    return;
+  }
+
+  showRecError("");
+  setLoading(true, "Transcribing your response...");
+  setRecActions([]);
+  try {
+    const audioBase64 = await blobToBase64(recordedBlob);
+    const res = await fetch(`${BACKEND_URL}/transcribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentCode: code,
+        examKey: examSelect.value,
+        skill: "speaking",
+        taskId: taskSelect.value,
+        audioBase64,
+        // MediaRecorder reports things like "audio/webm;codecs=opus"; the Worker
+        // validates against the bare type, so send just that.
+        audioMimeType: (recordedBlob.type || "audio/webm").split(";")[0],
+      })
+    });
+    const data = await res.json();
+
+    if (data.code === "SPEAKING_NOT_SUBSCRIBED") {
+      // Backstop for the case where the frontend pre-check was stale or bypassed.
+      speakingAccess = { hasAccess: false };
+      showPaywall(data.error);
+      return;
+    }
+    if (!res.ok || data.error) {
+      showRecError(data.error || `Transcription failed (${res.status}).`);
+      onRecordingStopped_restoreReviewActions();
+      return;
+    }
+
+    lastTranscript = data.transcript || "";
+    if (speakingAccess) {
+      speakingAccess.secondsUsed = data.secondsUsed;
+      speakingAccess.secondsLimit = data.secondsLimit;
+      renderAccessNote();
+    }
+
+    speakingPhase = "transcribed";
+    document.getElementById("transcriptText").textContent = lastTranscript;
+    document.getElementById("transcriptBox").style.display = "";
+    recPhaseEl.textContent = "Transcribed";
+    recSubEl.textContent = "Check the transcript below, then grade it.";
+    setRecActions([
+      { label: "Re-record", className: "secondary", onClick: () => { resetSpeakingFlow(); startRecordingPhase(); } },
+    ]);
+    document.getElementById("transcriptBox").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (e) {
+    showRecError("Couldn't send that recording: " + e.message);
+    onRecordingStopped_restoreReviewActions();
+  } finally {
+    setLoading(false);
+  }
+}
+
+// Puts the review-phase buttons back after a failed submission, so a transient
+// error doesn't strand the student with a recording and no way to retry.
+function onRecordingStopped_restoreReviewActions() {
+  if (speakingPhase !== "review") return;
+  setRecActions([
+    { label: "Submit for grading", className: "primary", onClick: submitForTranscription },
+    { label: "Re-record", className: "secondary", onClick: () => { resetSpeakingFlow(); startRecordingPhase(); } },
+  ]);
+}
+
+document.getElementById("gradeTranscriptBtn").addEventListener("click", () => {
+  if (!lastTranscript.trim()) { alert("There's no transcript to grade yet."); return; }
+  gradeSubmission(lastTranscript);
+});
+
+/* ===================== end Speaking =================================== */
+
 async function generateTask() {
   const code = studentCodeInput.value.trim();
   setLoading(true, "Generating a fresh task...");
@@ -624,8 +1178,12 @@ async function gradeSubmission(text) {
   }
 }
 
+// Everything the grader returns is derived from the student's own submitted text —
+// the model is explicitly told to quote it back — so a response containing markup
+// would otherwise be injected straight into the page. Coerce rather than assume a
+// string: a null or a number reaching .replace() would throw and blank the results.
 function escapeHtml(s) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 function buildHighlightedMarkup(text, errors) {
@@ -668,13 +1226,16 @@ function renderResults(data, originalText, usedPrompt) {
     const row = document.createElement("div");
     row.className = "crit";
     row.innerHTML = `
-      <div class="crit-label"><span>${c.name}</span><b>${score != null ? score : "—"} / ${c.max}</b></div>
+      <div class="crit-label"><span>${escapeHtml(c.name)}</span><b>${score != null ? escapeHtml(String(score)) : "—"} / ${escapeHtml(String(c.max))}</b></div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>`;
     list.appendChild(row);
   });
 
-  document.getElementById("disclaimer").textContent =
-    data.examKey === "det" ? "Practice estimate — not an official Duoligo English Test score." : "";
+  // Both notes are fixed strings chosen by exam/skill — no interpolated model output.
+  const disclaimerParts = [];
+  if (data.examKey === "det") disclaimerParts.push("Practice estimate — not an official Duolingo English Test score.");
+  if (data.skill === "speaking") disclaimerParts.push("Pronunciation is estimated from transcript fluency — for detailed phonetic feedback, work with your teacher directly.");
+  document.getElementById("disclaimer").textContent = disclaimerParts.join(" ");
 
   const critFbBlock = document.getElementById("criteriaFeedbackBlock");
   const critFbList = document.getElementById("criteriaFeedbackList");
@@ -684,10 +1245,10 @@ function renderResults(data, originalText, usedPrompt) {
     data.criteriaFeedback.forEach(cf => {
       const d = document.createElement("div");
       d.className = "crit-feedback-item";
-      d.innerHTML = `<h5>${cf.criterionName || cf.criterion}</h5>` +
-        (cf.strength ? `<p><b>Doing well:</b> <span class="cf-strength">${cf.strength}</span></p>` : "") +
-        (cf.weakness ? `<p><b>Held back by:</b> <span class="cf-weakness">${cf.weakness}</span></p>` : "") +
-        (cf.howToImprove ? `<p><b>Next time:</b> <span class="cf-improve">${cf.howToImprove}</span></p>` : "");
+      d.innerHTML = `<h5>${escapeHtml(cf.criterionName || cf.criterion)}</h5>` +
+        (cf.strength ? `<p><b>Doing well:</b> <span class="cf-strength">${escapeHtml(cf.strength)}</span></p>` : "") +
+        (cf.weakness ? `<p><b>Held back by:</b> <span class="cf-weakness">${escapeHtml(cf.weakness)}</span></p>` : "") +
+        (cf.howToImprove ? `<p><b>Next time:</b> <span class="cf-improve">${escapeHtml(cf.howToImprove)}</span></p>` : "");
       critFbList.appendChild(d);
     });
   } else { critFbBlock.style.display = "none"; }
@@ -708,9 +1269,9 @@ function renderResults(data, originalText, usedPrompt) {
     data.errors.forEach(e => {
       const d = document.createElement("div");
       d.className = "correction-item";
-      const tag = e.typeLabel ? `<span class="error-tag">${e.typeLabel}</span> ` : "";
-      const explain = e.explanation ? `<span class="explain">${e.explanation}</span>` : "";
-      d.innerHTML = `${tag}<span class="orig">${e.original}</span> → ${e.correction}${explain}`;
+      const tag = e.typeLabel ? `<span class="error-tag">${escapeHtml(e.typeLabel)}</span> ` : "";
+      const explain = e.explanation ? `<span class="explain">${escapeHtml(e.explanation)}</span>` : "";
+      d.innerHTML = `${tag}<span class="orig">${escapeHtml(e.original)}</span> → ${escapeHtml(e.correction)}${explain}`;
       correctionsList.appendChild(d);
     });
   } else { correctionsBlock.style.display = "none"; }
@@ -723,8 +1284,8 @@ function renderResults(data, originalText, usedPrompt) {
     data.suggestions.forEach(s => {
       const d = document.createElement("div");
       d.className = "suggestion-item";
-      const example = s.example ? `<span class="example">${s.example}</span>` : "";
-      d.innerHTML = (s.criterionName ? `<b>${s.criterionName}</b> — ${s.tip}` : s.tip) + example;
+      const example = s.example ? `<span class="example">${escapeHtml(s.example)}</span>` : "";
+      d.innerHTML = (s.criterionName ? `<b>${escapeHtml(s.criterionName)}</b> — ${escapeHtml(s.tip)}` : escapeHtml(s.tip)) + example;
       suggestionsList.appendChild(d);
     });
   } else { suggestionsBlock.style.display = "none"; }
@@ -817,7 +1378,7 @@ function renderProgress(submissions) {
   Object.keys(byExam).forEach(examKey => {
     const subs = byExam[examKey].slice().reverse(); // API returns newest-first; flip to chronological
     const label = FALLBACK_LABELS[examKey] || examKey;
-    html += `<div class="trend-block"><h4>${label}</h4>`;
+    html += `<div class="trend-block"><h4>${escapeHtml(label)}</h4>`;
     subs.slice(-8).forEach(s => { // most recent 8 attempts, oldest of those first
       const pct = s.max_total ? Math.min(100, (s.total_score / s.max_total) * 100) : 0;
       const date = new Date(s.created_at).toLocaleDateString();
@@ -847,9 +1408,9 @@ function renderProgress(submissions) {
     sortedMistakes.forEach(([label, count]) => {
       const pct = Math.round((count / maxCount) * 100);
       html += `<div class="mistake-row">
-        <span class="mistake-label">${label}</span>
+        <span class="mistake-label">${escapeHtml(label)}</span>
         <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--mark-red)"></div></div>
-        <span class="mistake-count">${count}</span>
+        <span class="mistake-count">${escapeHtml(String(count))}</span>
       </div>`;
     });
   }

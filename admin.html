@@ -30,7 +30,16 @@
   tr.student-row{cursor:pointer;}
   tr.student-row:hover{background:var(--stamp-teal-bg);}
   .code{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:600;background:var(--paper);padding:.15rem .4rem;border-radius:6px;}
-  .reset-images-btn{background:none;border:none;color:var(--stamp-teal);font-size:.75rem;text-decoration:underline;cursor:pointer;margin-left:.4rem;padding:0;}
+  .row-btn{background:none;border:none;color:var(--stamp-teal);font-size:.75rem;text-decoration:underline;cursor:pointer;margin-left:.4rem;padding:0;}
+  .row-btn.danger{color:#C84B31;}
+  .speak-cell{display:flex;flex-direction:column;gap:.25rem;align-items:flex-start;}
+  .speak-status{font-size:.82rem;}
+  .speak-status.on{color:var(--stamp-teal);font-weight:600;}
+  .speak-status.off{color:var(--ink-faint);}
+  .speak-grant{display:flex;gap:.3rem;align-items:center;}
+  .speak-grant select{font-size:.72rem;padding:.15rem .25rem;border:1px solid var(--paper-line);border-radius:6px;font-family:inherit;background:#fff;color:var(--ink);}
+  .speak-grant button{font-size:.72rem;padding:.2rem .5rem;border-radius:6px;}
+  .speak-meta{font-size:.68rem;color:var(--ink-faint);}
   .new-code{font-size:1.4rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;color:var(--seal-gold);text-align:center;padding:.75rem;background:#F7EEDC;border-radius:10px;margin-top:.75rem;display:none;}
   #gate{max-width:380px;margin:4rem auto 0;}
   #app{display:none;}
@@ -95,7 +104,7 @@
 
     <div class="card">
       <table id="rosterTable">
-        <thead><tr><th>Name</th><th>Code</th><th>Cohort</th><th>Quota</th><th>Images</th><th>Last activity</th></tr></thead>
+        <thead><tr><th>Name</th><th>Code</th><th>Cohort</th><th>Quota</th><th>Audio (sec)</th><th>Speaking access</th><th>Last activity</th></tr></thead>
         <tbody id="rosterBody"></tbody>
       </table>
     </div>
@@ -149,11 +158,47 @@ if (adminKey) {
   loadRoster();
 }
 
+// Shared POST helper for the per-row admin actions, so every one of them reports
+// server errors the same way instead of each inventing its own message.
+async function adminPost(path, body) {
+  try {
+    const res = await fetch(`${BACKEND_URL}${path}`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(data.error || `That didn't work (server returned ${res.status}).`); return null; }
+    return data;
+  } catch (err) {
+    alert("Couldn't reach the server: " + err.message);
+    return null;
+  }
+}
+
+function describeSpeaking(s) {
+  if (!s.speaking_active) {
+    // Distinguish "never had it" from "had it and it ran out" — the teacher needs to
+    // know whether a renewal lapsed or was never bought.
+    if (s.speaking_access && s.speaking_expires_at) {
+      return { cls: "off", text: `Expired ${new Date(s.speaking_expires_at).toLocaleDateString()}` };
+    }
+    return { cls: "off", text: "No access" };
+  }
+  return {
+    cls: "on",
+    text: s.speaking_expires_at
+      ? `Until ${new Date(s.speaking_expires_at).toLocaleDateString()}`
+      : "Lifetime",
+  };
+}
+
 async function loadRoster() {
   try {
     const res = await fetch(`${BACKEND_URL}/admin/students`, { headers: authHeaders() });
     if (!res.ok) { alert(`Couldn't load roster (server returned ${res.status}).`); return; }
     const data = await res.json();
+    const secondsLimit = data.speakingSecondsLimit ?? 600;
     const body = document.getElementById("rosterBody");
     body.innerHTML = "";
     (data.students || []).forEach(s => {
@@ -161,54 +206,90 @@ async function loadRoster() {
       tr.className = "student-row";
       const limit = s.task_limit ?? 20;
       const overQuota = s.submission_count >= limit;
-      tr.innerHTML = `<td>${s.name}</td><td><span class="code">${s.code}</span></td><td>${s.cohort || "—"}</td>
-        <td${overQuota ? ' style="color:#C84B31;font-weight:600"' : ""}>${s.submission_count}/${limit}
-          <button type="button" class="reset-images-btn add-attempts-btn" data-code="${s.code}" data-name="${escapeHtml(s.name)}">+5</button>
-          <button type="button" class="reset-images-btn set-limit-btn" data-code="${s.code}" data-name="${escapeHtml(s.name)}" data-limit="${limit}">set…</button>
+      const audioUsed = s.speaking_seconds_used ?? 0;
+      const overAudio = audioUsed >= secondsLimit;
+      const speak = describeSpeaking(s);
+      // Revoking clears the flag but keeps the dates, so this line has to read
+      // correctly for a revoked student too — hence "last granted", not "granted".
+      const grantedMeta = s.speaking_granted_by && s.speaking_granted_at
+        ? `last granted by ${escapeHtml(s.speaking_granted_by)} on ${new Date(s.speaking_granted_at).toLocaleDateString()}`
+        : "";
+
+      tr.innerHTML = `<td>${escapeHtml(s.name)}</td><td><span class="code">${escapeHtml(s.code)}</span></td><td>${escapeHtml(s.cohort || "—")}</td>
+        <td${overQuota ? ' style="color:#C84B31;font-weight:600"' : ""}>${escapeHtml(String(s.submission_count))}/${escapeHtml(String(limit))}
+          <button type="button" class="row-btn add-attempts-btn">+5</button>
+          <button type="button" class="row-btn set-limit-btn" data-limit="${escapeHtml(String(limit))}">set…</button>
         </td>
-        <td>${s.images_used}/10 <button type="button" class="reset-images-btn" data-code="${s.code}">reset</button></td>
-        <td>${s.last_submission ? new Date(s.last_submission).toLocaleDateString() : "—"}</td>`;
+        <td${overAudio ? ' style="color:#C84B31;font-weight:600"' : ""}>${escapeHtml(String(audioUsed))}/${escapeHtml(String(secondsLimit))}
+          <button type="button" class="row-btn reset-audio-btn">reset</button>
+        </td>
+        <td>
+          <div class="speak-cell">
+            <span class="speak-status ${speak.cls}">${escapeHtml(speak.text)}</span>
+            ${grantedMeta ? `<span class="speak-meta">${grantedMeta}</span>` : ""}
+            <div class="speak-grant">
+              <select class="grant-duration">
+                <option value="1">1 month</option>
+                <option value="3">3 months</option>
+                <option value="6">6 months</option>
+                <option value="lifetime">Lifetime</option>
+                <option value="custom">Custom date…</option>
+              </select>
+              <button type="button" class="grant-btn">${s.speaking_active ? "Extend" : "Grant"}</button>
+              ${s.speaking_active ? '<button type="button" class="row-btn danger revoke-btn">revoke</button>' : ""}
+            </div>
+          </div>
+        </td>
+        <td>${s.last_submission ? escapeHtml(new Date(s.last_submission).toLocaleDateString()) : "—"}</td>`;
+
       tr.addEventListener("click", () => loadHistory(s.code, s.name));
-      tr.querySelector(".reset-images-btn:not(.add-attempts-btn):not(.set-limit-btn)").addEventListener("click", async (e) => {
-        e.stopPropagation();
-        if (!confirm(`Reset ${s.name}'s image upload count back to 0?`)) return;
-        try {
-          const res = await fetch(`${BACKEND_URL}/admin/students/${encodeURIComponent(s.code)}/reset-images`, { method: "POST", headers: authHeaders() });
-          if (!res.ok) { alert("Couldn't reset that — try again."); return; }
-          loadRoster();
-        } catch (err) {
-          alert("Couldn't reach the server: " + err.message);
-        }
+
+      // Controls live inside a row whose click opens the history panel, so every one
+      // of them has to stop propagation or acting on a student also navigates away.
+      tr.querySelectorAll("button, select").forEach(el => el.addEventListener("click", (e) => e.stopPropagation()));
+
+      tr.querySelector(".reset-audio-btn").addEventListener("click", async () => {
+        if (!confirm(`Reset ${s.name}'s used audio seconds back to 0?`)) return;
+        if (await adminPost(`/admin/students/${encodeURIComponent(s.code)}/reset-speaking`)) loadRoster();
       });
-      tr.querySelector(".add-attempts-btn").addEventListener("click", async (e) => {
-        e.stopPropagation();
-        try {
-          const res = await fetch(`${BACKEND_URL}/admin/students/${encodeURIComponent(s.code)}/quota`, {
-            method: "POST", headers: authHeaders(), body: JSON.stringify({ addAttempts: 5 })
-          });
-          if (!res.ok) { alert("Couldn't update quota — try again."); return; }
-          loadRoster();
-        } catch (err) {
-          alert("Couldn't reach the server: " + err.message);
+
+      tr.querySelector(".grant-btn").addEventListener("click", async () => {
+        const choice = tr.querySelector(".grant-duration").value;
+        let payload;
+        if (choice === "lifetime") {
+          if (!confirm(`Give ${s.name} permanent speaking access with no expiry?`)) return;
+          payload = { lifetime: true };
+        } else if (choice === "custom") {
+          const input = prompt(`Speaking access for ${s.name} should expire on (YYYY-MM-DD):`, "");
+          if (input === null) return;
+          const when = new Date(input.trim());
+          if (isNaN(when.getTime())) { alert("That isn't a date I can read. Use YYYY-MM-DD."); return; }
+          payload = { expiresAt: when.toISOString() };
+        } else {
+          payload = { months: parseInt(choice, 10) };
         }
+        if (await adminPost(`/admin/students/${encodeURIComponent(s.code)}/grant-speaking`, payload)) loadRoster();
       });
+
+      const revokeBtn = tr.querySelector(".revoke-btn");
+      if (revokeBtn) revokeBtn.addEventListener("click", async () => {
+        if (!confirm(`Revoke ${s.name}'s speaking access now? They'll keep writing practice.`)) return;
+        if (await adminPost(`/admin/students/${encodeURIComponent(s.code)}/revoke-speaking`)) loadRoster();
+      });
+
+      tr.querySelector(".add-attempts-btn").addEventListener("click", async () => {
+        if (await adminPost(`/admin/students/${encodeURIComponent(s.code)}/quota`, { addAttempts: 5 })) loadRoster();
+      });
+
       tr.querySelector(".set-limit-btn").addEventListener("click", async (e) => {
-        e.stopPropagation();
         const current = e.currentTarget.dataset.limit;
         const input = prompt(`Set ${s.name}'s total attempt quota to:`, current);
         if (input === null) return;
         const taskLimit = parseInt(input, 10);
         if (isNaN(taskLimit) || taskLimit < 0) { alert("Enter a whole number of 0 or more."); return; }
-        try {
-          const res = await fetch(`${BACKEND_URL}/admin/students/${encodeURIComponent(s.code)}/quota`, {
-            method: "POST", headers: authHeaders(), body: JSON.stringify({ taskLimit })
-          });
-          if (!res.ok) { alert("Couldn't update quota — try again."); return; }
-          loadRoster();
-        } catch (err) {
-          alert("Couldn't reach the server: " + err.message);
-        }
+        if (await adminPost(`/admin/students/${encodeURIComponent(s.code)}/quota`, { taskLimit })) loadRoster();
       });
+
       body.appendChild(tr);
     });
   } catch (e) {
