@@ -267,6 +267,15 @@
     background:var(--stamp-teal-bg);border-radius:8px;padding:.45rem .7rem;text-align:center;
   }
 
+  /* --- Фотография к заданию ------------------------------------------- */
+  .photo-gen{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem;}
+  .photo-gen button{width:auto;min-width:0;margin:0;}
+  .photo-gen-status{font-size:.8rem;color:var(--muted);}
+  #generatedPhotoWrap{margin:.6rem 0 .9rem;}
+  #generatedPhoto{
+    max-width:100%;border-radius:10px;border:1px solid var(--rule);display:block;
+  }
+
   /* --- Тарифы --------------------------------------------------------- */
   .paywall-lead{max-width:46ch;margin-inline:auto;}
   .paywall-reason{
@@ -288,6 +297,11 @@
   .plan-unit{font-size:.75rem;color:var(--muted);margin-bottom:.5rem;}
   .plan-card .plan-buy{width:100%;min-width:0;margin-top:auto;}
   .plan-hint{font-size:.8rem;color:var(--muted);}
+  .plan-unit-note{
+    font-size:.82rem;line-height:1.65;color:var(--ink);text-align:left;
+    background:var(--card);border:1px solid var(--rule);border-radius:10px;
+    padding:.7rem .9rem;margin:.6rem 0;
+  }
 
   /* Раскрывающийся блок: честные ожидания читают те, кому это важно, а
      остальным он не мешает принять решение. */
@@ -372,6 +386,14 @@
     <div id="promptHiddenNote" class="access-note" style="display:none;margin-top:1rem"></div>
 
     <div id="imageUploadWrap" style="display:none;margin-top:1rem">
+      <div class="photo-gen">
+        <button type="button" class="secondary" id="generatePhotoBtn">Generate the photo for this task</button>
+        <span class="photo-gen-status" id="photoStatus"></span>
+      </div>
+      <div id="generatedPhotoWrap" style="display:none">
+        <img id="generatedPhoto" alt="Photo generated for this task">
+        <p class="image-note">Сгенерированная фотография для тренировки. На реальном экзамене вы увидите настоящий снимок.</p>
+      </div>
       <label for="imageInput">Upload a photo (optional — if you have the real image for this task)</label>
       <input type="file" id="imageInput" accept="image/*">
       <div id="imagePreviewWrap" style="display:none">
@@ -403,6 +425,16 @@
 
         <div class="plan-grid" id="planGrid"></div>
         <p class="plan-hint" id="planHint"></p>
+
+        <p class="plan-unit-note">
+          Одно задание — это <strong>целая часть экзамена целиком</strong>, а не один вопрос.
+          Например, «Take an Interview» в TOEFL — это все 4 вопроса подряд, а Part 1 в IELTS —
+          все 5. Полный разговорный раздел TOEFL укладывается в 2 задания.
+          <br>
+          Тренировка «Listen and Repeat» <strong>не расходует задания вообще</strong> — она
+          проверяется сравнением с исходным предложением, а не моделью, поэтому её можно
+          повторять сколько угодно.
+        </p>
 
         <!-- Честно о том, что это такое. Обещать больше, чем система реально измеряет,
              значит однажды объяснять ученику, почему оценка не совпала с настоящей. -->
@@ -776,10 +808,11 @@ function showTaskMeta() {
   taskMeta.innerHTML = html;
   document.getElementById("imageUploadWrap").style.display = t.requiresImage ? "" : "none";
   if (t.requiresImage) {
-    taskMeta.innerHTML += `<div class="image-note" style="width:100%">This task normally includes a photo. Either describe the scene in words above, or upload the real photo below if you have it.</div>`;
+    taskMeta.innerHTML += `<div class="image-note" style="width:100%">This task is built around a photo. Generate one below — or upload the real photo if you have it.</div>`;
   }
   applyPromptVisibility(t);
   clearImage();
+  clearGeneratedPhoto();
   clearTimerUI();
   resetSpeakingFlow();
 }
@@ -936,6 +969,63 @@ function readAndResizeImage(file) {
     reader.readAsDataURL(file);
   });
 }
+
+/* ---- Task photo generation ------------------------------------------------
+
+   Several tasks (DET Speak About the Photo, PET Part 2, Cambridge long turns) are
+   built around a photograph. Asking the student to go and find a suitable file
+   mid-practice is friction exactly where the real exam has none, so the site makes
+   one. Each scene is cached server-side, so the same photo costs nothing the second
+   time anybody meets it. The upload box stays for students with real exam material. */
+
+let generatedPhotoBase64 = null;
+
+function clearGeneratedPhoto() {
+  generatedPhotoBase64 = null;
+  document.getElementById("generatedPhotoWrap").style.display = "none";
+  document.getElementById("generatedPhoto").removeAttribute("src");
+  document.getElementById("photoStatus").textContent = "";
+}
+
+document.getElementById("generatePhotoBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("generatePhotoBtn");
+  const status = document.getElementById("photoStatus");
+  const code = studentCodeInput.value.trim();
+  if (!code) { alert("Введите код ученика вверху страницы."); return; }
+
+  // The scene comes from the generated task text — that's the description the grader
+  // and the student are both working from, so the picture has to match it rather than
+  // being a second, unrelated invention.
+  const description = document.getElementById("promptText").value.trim();
+  if (!description) { alert("Сначала сгенерируйте задание — по его описанию создаётся фотография."); return; }
+
+  btn.disabled = true;
+  status.textContent = "Создаём фотографию…";
+  try {
+    const res = await fetch(`${BACKEND_URL}/task-image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentCode: code, examKey: examSelect.value, skill: currentSkill,
+        taskId: taskSelect.value, description: description.slice(0, 900),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.imageBase64) {
+      status.textContent = data.error || "Не удалось создать фотографию — можно загрузить свою.";
+      return;
+    }
+    generatedPhotoBase64 = data.imageBase64;
+    document.getElementById("generatedPhoto").src = `data:${data.mimeType || "image/jpeg"};base64,${data.imageBase64}`;
+    document.getElementById("generatedPhotoWrap").style.display = "";
+    status.textContent = data.cached ? "Готово (из кэша)." : "Готово.";
+    clearImage(); // a generated photo and an uploaded one would otherwise both be in play
+  } catch (_) {
+    status.textContent = "Нет связи с сервером — попробуйте ещё раз.";
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 document.getElementById("imageInput").addEventListener("change", async (e) => {
   const file = e.target.files[0];
@@ -1382,10 +1472,10 @@ async function renderPlans() {
   const code = studentCodeInput.value.trim();
   grid.innerHTML = plans.map((plan, i) => `
     <div class="plan-card${i === 0 ? " plan-card-featured" : ""}">
-      <div class="plan-attempts">${plan.attempts} ответов</div>
+      <div class="plan-attempts">${plan.attempts} заданий</div>
       <div class="plan-price">${plan.priceRub} ₽</div>
       <div class="plan-period">на ${plan.months} мес.</div>
-      <div class="plan-unit">${Math.round(plan.priceRub / plan.attempts)} ₽ за ответ</div>
+      <div class="plan-unit">${Math.round(plan.priceRub / plan.attempts)} ₽ за задание</div>
       <button type="button" class="primary plan-buy" data-plan="${plan.id}">Оплатить</button>
     </div>
   `).join("");
@@ -1448,7 +1538,7 @@ function renderAccessNote() {
   // Attempts, not minutes: that's what was sold, so that's what gets counted back.
   if (typeof speakingAccess.attemptsRemaining === "number") {
     const left = speakingAccess.attemptsRemaining;
-    parts.push(left === 1 ? "остался 1 ответ" : `осталось ${left} ответов`);
+    parts.push(left === 1 ? "осталось 1 задание" : `осталось ${left} заданий`);
   }
   note.textContent = parts.join(" · ");
   note.style.display = "";
@@ -2037,7 +2127,13 @@ async function gradeSubmission(text) {
         taskId: taskSelect.value,
         prompt: document.getElementById("promptText").value.trim(),
         text,
-        image: currentImageBase64 ? { mediaType: "image/jpeg", data: currentImageBase64 } : undefined
+        // An uploaded photo wins over a generated one — if the student brought real exam
+        // material, that's what they were actually describing. Either way the grader
+        // sees the picture, so it can judge whether the description matched it rather
+        // than guessing from the transcript alone.
+        image: (currentImageBase64 || generatedPhotoBase64)
+          ? { mediaType: "image/jpeg", data: currentImageBase64 || generatedPhotoBase64 }
+          : undefined
       })
     });
     const data = await res.json();
