@@ -768,9 +768,173 @@ const RECORDING_GRACE_SECONDS = 30; // matches the Worker's own per-task ceiling
    rather than blocking the task. Clips are cached for the session so a replay — or a
    second attempt at the same question set — costs nothing.                        */
 
-const ttsCache = new Map();   // text -> object URL
+const ttsCache = new Map();   // clip key -> object URL, for this page view only
 let currentAudio = null;      // the <audio> currently playing, so we can cancel it
 let sequenceAbort = false;    // set when the student bails out mid-sequence
+
+/* ---- Durable clip cache (IndexedDB) --------------------------------------
+
+   The Map above is tier one: instant, but it dies with the page. That was the
+   whole cache until now, which meant a student who refreshed mid-session re-billed
+   every question they'd already heard, and a student who came back tomorrow started
+   from zero. Tier two fixes that with IndexedDB — real bytes on the student's own
+   device, surviving refreshes and restarts.
+
+   Tier three lives in the Worker (R2, see worker/src/assetStore.js) and is what
+   makes a clip generated for one student free for the next. All three key a clip the
+   same way, on the normalised text, so they can't disagree about what a clip *is*.
+
+   Every function here fails soft. Private-browsing windows, a full disk, and Safari's
+   storage eviction all show up as IndexedDB errors, and none of them are a reason a
+   student can't hear their exam question — they just fall through to the network. */
+
+/* clip-cache:start */
+const CLIP_DB_NAME = "examScorerAudio";
+const CLIP_DB_VERSION = 1;
+const CLIP_STORE = "clips";
+// Roughly 40 MB of MP3 — several hundred exam questions. Generous enough that a
+// normal student never evicts, small enough to be a considerate guest on a device
+// whose owner never agreed to host an audio library.
+const CLIP_BUDGET_BYTES = 40 * 1024 * 1024;
+const CLIP_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+// Which TTS engine the Worker last told us it was using. If the teacher switches
+// engines server-side, every stored clip is in the wrong voice — recognisably so,
+// mid-exam — so the switch has to wipe the store rather than serve a mixed set.
+const CLIP_ENGINE_KEY = "examPrepTtsEngine";
+
+// Must match normalizeText() in worker/src/assetStore.js. If these two ever drift,
+// nothing breaks loudly — the cache just quietly stops hitting, which is the kind of
+// bug that hides for months, so keep them in sync deliberately.
+function clipKey(text) {
+  return String(text).replace(/\s+/g, " ").trim();
+}
+
+let clipDbPromise = null;
+function clipDb() {
+  if (clipDbPromise) return clipDbPromise;
+  clipDbPromise = new Promise(resolve => {
+    if (!("indexedDB" in window)) { resolve(null); return; }
+    let request;
+    try { request = indexedDB.open(CLIP_DB_NAME, CLIP_DB_VERSION); }
+    catch (_) { resolve(null); return; }
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(CLIP_STORE)) {
+        const store = db.createObjectStore(CLIP_STORE, { keyPath: "key" });
+        store.createIndex("lastUsedAt", "lastUsedAt");
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(null);
+    request.onblocked = () => resolve(null);
+    // Firefox in permanent-private mode neither resolves nor errors on open.
+    setTimeout(() => resolve(null), 3000);
+  });
+  return clipDbPromise;
+}
+
+function clipTx(db, mode) {
+  return db.transaction(CLIP_STORE, mode).objectStore(CLIP_STORE);
+}
+
+function idbRequest(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function clipGet(key) {
+  const db = await clipDb();
+  if (!db) return null;
+  try {
+    const record = await idbRequest(clipTx(db, "readonly").get(key));
+    if (!record || !record.blob) return null;
+    if (Date.now() - (record.createdAt || 0) > CLIP_MAX_AGE_MS) {
+      clipDelete(key);
+      return null;
+    }
+    // Bump recency for the eviction pass; not worth blocking playback on.
+    record.lastUsedAt = Date.now();
+    try { clipTx(db, "readwrite").put(record); } catch (_) { /* recency is advisory */ }
+    return record;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function clipDelete(key) {
+  const db = await clipDb();
+  if (!db) return;
+  try { clipTx(db, "readwrite").delete(key); } catch (_) { /* nothing to do */ }
+}
+
+async function clipPut(key, blob, meta) {
+  const db = await clipDb();
+  if (!db) return;
+  const now = Date.now();
+  try {
+    await idbRequest(clipTx(db, "readwrite").put({
+      key, blob,
+      mimeType: meta.mimeType || "audio/mpeg",
+      engine: meta.engine || null,
+      cacheKey: meta.cacheKey || null,   // the Worker's R2 key, for tracing a clip end to end
+      bytes: blob.size,
+      createdAt: now,
+      lastUsedAt: now,
+    }));
+  } catch (_) {
+    // QuotaExceededError lands here. Make room and let the next clip through rather
+    // than retrying this one — the student already has this clip playing from memory.
+    clipEvict();
+    return;
+  }
+  clipEvict();
+}
+
+// Least-recently-used eviction down to the budget. Runs after a write, when we know
+// the store just grew, rather than on a timer nobody would notice was broken.
+async function clipEvict() {
+  const db = await clipDb();
+  if (!db) return;
+  try {
+    const records = await idbRequest(clipTx(db, "readonly").getAll());
+    let total = records.reduce((sum, r) => sum + (r.bytes || 0), 0);
+    if (total <= CLIP_BUDGET_BYTES) return;
+    records.sort((a, b) => (a.lastUsedAt || 0) - (b.lastUsedAt || 0));
+    const store = clipTx(db, "readwrite");
+    for (const record of records) {
+      if (total <= CLIP_BUDGET_BYTES) break;
+      store.delete(record.key);
+      total -= record.bytes || 0;
+    }
+  } catch (_) { /* over budget is survivable; a thrown error mid-exam is not */ }
+}
+
+async function clipClearAll() {
+  const db = await clipDb();
+  if (!db) return;
+  try { clipTx(db, "readwrite").clear(); } catch (_) { /* nothing to do */ }
+}
+
+// Called with the `engine` the Worker reports on every /speak response. Returns a
+// promise that settles once any wipe has finished, so a caller storing a clip from
+// this same response can chain behind it. Without that, storing the new clip and
+// clearing the old ones race, and which one wins is down to microtask ordering —
+// the kind of thing that works until the day it doesn't.
+async function noteTtsEngine(engine) {
+  if (!engine) return;
+  let previous = null;
+  try { previous = localStorage.getItem(CLIP_ENGINE_KEY); } catch (_) { return; }
+  try { localStorage.setItem(CLIP_ENGINE_KEY, engine); } catch (_) { /* non-fatal */ }
+  if (previous === engine || !previous) return;
+  // Voice changed under us — every stored clip is now the wrong examiner.
+  ttsCache.forEach(url => URL.revokeObjectURL(url));
+  ttsCache.clear();
+  await clipClearAll();
+}
+/* clip-cache:end — worker/test/clipcache.mjs slices this block out by these markers
+   and runs it against a real IndexedDB. Keep both markers if you move the code. */
 
 function cancelSpeech() {
   if (currentAudio) {
@@ -835,7 +999,18 @@ async function speakWithBrowser(text) {
 async function speakLine(text) {
   if (!text || !text.trim()) return;
   const code = studentCodeInput.value.trim();
-  let url = ttsCache.get(text);
+  const key = clipKey(text);
+  let url = ttsCache.get(key);
+
+  // Tier two: this device's own store. A refresh, a second attempt at the same
+  // question set, or coming back tomorrow all land here instead of on the network.
+  if (!url) {
+    const stored = await clipGet(key);
+    if (stored) {
+      url = URL.createObjectURL(stored.blob);
+      ttsCache.set(key, url);
+    }
+  }
 
   if (!url) {
     try {
@@ -854,9 +1029,15 @@ async function speakLine(text) {
         throw new Error("not subscribed");
       }
       if (res.ok && data.audioBase64) {
+        const engineChecked = noteTtsEngine(data.engine);
         const bytes = Uint8Array.from(atob(data.audioBase64), c => c.charCodeAt(0));
-        url = URL.createObjectURL(new Blob([bytes], { type: data.mimeType || "audio/mpeg" }));
-        ttsCache.set(text, url);
+        const blob = new Blob([bytes], { type: data.mimeType || "audio/mpeg" });
+        url = URL.createObjectURL(blob);
+        ttsCache.set(key, url);
+        // Neither awaited: the student should hear the question now, not after a disk
+        // write. Chained, though — an engine switch wipes the store, and this clip must
+        // land after that wipe rather than be swept up by it.
+        engineChecked.then(() => clipPut(key, blob, { mimeType: data.mimeType, engine: data.engine, cacheKey: data.cacheKey }));
       }
     } catch (e) {
       if (e.message === "not subscribed") throw e;
@@ -1467,8 +1648,10 @@ async function generateTask() {
     const data = await res.json();
     if (data.error) { alert(data.error); return; }
 
-    // New prompt text means the cached clips are dead weight — free the object URLs
-    // rather than leaking one per generation.
+    // New prompt text means these object URLs are dead weight — free them rather than
+    // leaking one per generation. Only the in-memory tier is dropped: the IndexedDB
+    // copies stay on purpose, because generated question sets overlap heavily and a
+    // repeat question should cost nothing the second time it comes up.
     ttsCache.forEach(url => URL.revokeObjectURL(url));
     ttsCache.clear();
 
