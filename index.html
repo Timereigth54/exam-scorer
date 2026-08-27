@@ -1064,7 +1064,45 @@ let mediaStream = null;
 let recordedChunks = [];
 let recordedBlob = null;
 let recordedSeconds = 0;
-let recordingStartedAt = 0;
+/* How long the microphone has ACTUALLY been recording.
+
+   Not wall-clock time. On a sequenced task the recorder is paused while each question
+   plays, so a 7-question Listen-and-Repeat spans about 2:06 of real time but contains
+   only 1:24 of audio. Measuring wall clock made the app reject its own recordings for
+   being too long — the sequencer had produced exactly what it asked for.
+
+   Driven by the MediaRecorder's own pause/resume events rather than by the sequencer,
+   so it stays correct no matter who pauses the recorder or why. */
+let recordedMs = 0;          // completed recording time, excluding pauses
+let recordingResumedAt = null; // when the current live stretch began; null while paused
+
+function currentRecordedSeconds() {
+  const live = recordingResumedAt === null ? 0 : Date.now() - recordingResumedAt;
+  return (recordedMs + live) / 1000;
+}
+
+function resetRecordingClock() {
+  recordedMs = 0;
+  recordingResumedAt = null;
+}
+
+// recording-window:start
+// How much audio this task can legitimately produce.
+//
+// For a sequenced task the sequencer hands the student `questions × gapSeconds` of
+// answering time, and that is the floor — the app must never reject a recording its
+// own timer just produced. `responseMinutes` stays the floor for single-answer tasks,
+// and the larger of the two wins, so a task whose two numbers disagree fails in the
+// student's favour rather than against them.
+function allowedRecordingSeconds(task) {
+  const fromWindow = Math.round((task.responseMinutes || task.timeLimit || 1) * 60);
+  const voice = task && task.voice;
+  const fromSequence = voice && voice.questions > 1 && voice.gapSeconds
+    ? voice.questions * voice.gapSeconds
+    : 0;
+  return Math.max(fromWindow, fromSequence);
+}
+// recording-window:end
 let phaseInterval = null;
 let playbackUrl = null;
 let lastTranscript = "";
@@ -1756,7 +1794,7 @@ async function runVoicedTask() {
 
       // --- answering slot, recorder live ---
       if (canPause && mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
-      recordingStartedAt = recordingStartedAt || Date.now();
+      // The pause/resume listeners keep the clock; nothing to seed here.
       const slot = voice.gapSeconds || Math.round((t.responseMinutes || 1) * 60);
       await runAnswerSlot(slot, i + 1, lines.length);
       if (canPause && mediaRecorder && mediaRecorder.state === "recording" && i < lines.length - 1) {
@@ -1888,7 +1926,18 @@ async function beginRecording({ paused = false } = {}) {
   });
   mediaRecorder.addEventListener("stop", onRecordingStopped);
 
-  recordingStartedAt = Date.now();
+  // Bank the elapsed stretch on pause, start a new one on resume. Hooking the events
+  // rather than the call sites means a browser that pauses for its own reasons is
+  // still counted correctly.
+  mediaRecorder.addEventListener("pause", () => {
+    if (recordingResumedAt !== null) { recordedMs += Date.now() - recordingResumedAt; recordingResumedAt = null; }
+  });
+  mediaRecorder.addEventListener("resume", () => {
+    recordingResumedAt = Date.now();
+  });
+
+  resetRecordingClock();
+  recordingResumedAt = Date.now();
   mediaRecorder.start();
 
   // The sequencer opens the mic before the first question is spoken, then holds it
@@ -1908,7 +1957,7 @@ async function startRecordingPhase() {
   if (!started) return;
 
   speakingPhase = "recording";
-  const maxSeconds = Math.round((t.responseMinutes || t.timeLimit || 1) * 60);
+  const maxSeconds = allowedRecordingSeconds(t);
 
   recPhaseEl.innerHTML = '<span class="rec-live"><span class="rec-dot"></span>Recording</span>';
   recSubEl.textContent = `Speak now — recording stops automatically at ${formatDuration(maxSeconds / 60)}.`;
@@ -1919,7 +1968,7 @@ async function startRecordingPhase() {
   setRecActions([{ label: "Stop", className: "primary", onClick: () => stopRecording() }]);
 
   phaseInterval = setInterval(() => {
-    const elapsed = (Date.now() - recordingStartedAt) / 1000;
+    const elapsed = currentRecordedSeconds();
     recClockEl.textContent = fmtClock(elapsed);
     recMeterFillEl.style.width = `${Math.min(100, (elapsed / maxSeconds) * 100)}%`;
     if (elapsed >= maxSeconds * 0.85) recClockEl.classList.add("warning");
@@ -1929,7 +1978,10 @@ async function startRecordingPhase() {
 
 function stopRecording(auto = false) {
   if (phaseInterval) { clearInterval(phaseInterval); phaseInterval = null; }
-  recordedSeconds = (Date.now() - recordingStartedAt) / 1000;
+  // Bank the final stretch before reading, or a recording stopped while live loses
+  // whatever hadn't been accumulated yet.
+  if (recordingResumedAt !== null) { recordedMs += Date.now() - recordingResumedAt; recordingResumedAt = null; }
+  recordedSeconds = recordedMs / 1000;
   if (mediaRecorder && mediaRecorder.state !== "inactive") {
     try { mediaRecorder.stop(); } catch (e) { /* fall through to onRecordingStopped */ }
   }
@@ -1962,12 +2014,14 @@ function onRecordingStopped() {
 
   recPhaseEl.textContent = "Listen back";
   recClockEl.textContent = fmtClock(recordedSeconds);
-  recSubEl.textContent = "Happy with it? Send it for transcription. Otherwise record again.";
+  recSubEl.textContent = currentTaskMeta() && currentTaskMeta().voice && currentTaskMeta().voice.questions > 1
+    ? "Happy with it? Send it for grading. Starting again replays all the questions."
+    : "Happy with it? Send it for transcription. Otherwise record again.";
   recMeterEl.style.display = "none";
   recClockEl.classList.remove("warning");
   setRecActions([
     { label: "Submit for grading", className: "primary", onClick: submitForTranscription },
-    { label: "Re-record", className: "secondary", onClick: () => { resetSpeakingFlow(); startRecordingPhase(); } },
+    { label: restartLabel(), className: "secondary", onClick: restartSpeakingTask },
   ]);
 }
 
@@ -1991,7 +2045,7 @@ async function submitForTranscription() {
   if (!code) { alert("Enter your student code first."); return; }
   if (!recordedBlob || !t) return;
 
-  const maxSeconds = Math.round((t.responseMinutes || t.timeLimit || 1) * 60) + RECORDING_GRACE_SECONDS;
+  const maxSeconds = allowedRecordingSeconds(t) + RECORDING_GRACE_SECONDS;
   if (recordedSeconds > maxSeconds) {
     showRecError(`That recording is ${fmtClock(recordedSeconds)} long, but this task allows at most ${fmtClock(maxSeconds)}. Please record a shorter answer.`);
     return;
@@ -2048,7 +2102,7 @@ async function submitForTranscription() {
     recPhaseEl.textContent = "Transcribed";
     recSubEl.textContent = "Check the transcript below, then grade it.";
     setRecActions([
-      { label: "Re-record", className: "secondary", onClick: () => { resetSpeakingFlow(); startRecordingPhase(); } },
+      { label: restartLabel(), className: "secondary", onClick: restartSpeakingTask },
     ]);
     document.getElementById("transcriptBox").scrollIntoView({ behavior: "smooth", block: "nearest" });
   } catch (e) {
@@ -2059,13 +2113,57 @@ async function submitForTranscription() {
   }
 }
 
+/* Restarting a task has to re-enter it the way the student first entered it.
+
+   "Re-record" previously called startRecordingPhase() unconditionally, which is the
+   free-form single-take path. On a sequenced task that silently abandoned the exam
+   format: instead of hearing 7 questions with a timed slot after each, the student got
+   one open-ended recording and a Stop button. The recording produced was not the task.
+
+   So dispatch on what the task actually is — the same branch renderIdlePhase() uses —
+   rather than assuming the simple case. */
+// restart-mode:start
+// Which entry path a task should restart through. Pure so it can be tested — the bug
+// this replaces was a wrong branch, not wrong arithmetic, and a wrong branch is only
+// visible if you can ask "which one would you pick?" without a browser.
+function restartMode(task, hasQuestionLines) {
+  if (!task) return "none";
+  if (task.voice && hasQuestionLines) return "sequence";
+  if ((task.prepMinutes || 0) > 0) return "prep";
+  return "record";
+}
+
+// On a sequenced task the button replays every question, so "Re-record" undersells
+// what is about to happen — the student is starting the task over, not re-taking one
+// answer.
+function restartLabelFor(task) {
+  const voice = task && task.voice;
+  return voice && voice.questions > 1 ? "Start the task again" : "Re-record";
+}
+// restart-mode:end
+
+function restartSpeakingTask() {
+  resetSpeakingFlow();
+  const t = currentTaskMeta();
+  switch (restartMode(t, linesToSpeak().length > 0)) {
+    case "sequence": runVoicedTask(); break;
+    case "prep": startPrepPhase(); break;
+    case "record": startRecordingPhase(); break;
+    default: break;
+  }
+}
+
+function restartLabel() {
+  return restartLabelFor(currentTaskMeta());
+}
+
 // Puts the review-phase buttons back after a failed submission, so a transient
 // error doesn't strand the student with a recording and no way to retry.
 function onRecordingStopped_restoreReviewActions() {
   if (speakingPhase !== "review") return;
   setRecActions([
     { label: "Submit for grading", className: "primary", onClick: submitForTranscription },
-    { label: "Re-record", className: "secondary", onClick: () => { resetSpeakingFlow(); startRecordingPhase(); } },
+    { label: restartLabel(), className: "secondary", onClick: restartSpeakingTask },
   ]);
 }
 
