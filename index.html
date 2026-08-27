@@ -266,6 +266,62 @@
     margin-top:.6rem;font-size:.8rem;color:var(--stamp-teal);
     background:var(--stamp-teal-bg);border-radius:8px;padding:.45rem .7rem;text-align:center;
   }
+
+  /* --- Тарифы --------------------------------------------------------- */
+  .paywall-lead{max-width:46ch;margin-inline:auto;}
+  .paywall-reason{
+    color:var(--seal-gold);font-weight:600;
+    background:rgba(0,0,0,.03);border-radius:8px;padding:.4rem .6rem;
+  }
+  .plan-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:.75rem;margin:1rem 0 .5rem;
+  }
+  .plan-card{
+    background:var(--card);border:1px solid var(--rule);border-radius:10px;
+    padding:1rem .85rem;display:flex;flex-direction:column;gap:.15rem;align-items:center;
+  }
+  .plan-card-featured{border-color:var(--seal-gold);box-shadow:0 0 0 1px var(--seal-gold) inset;}
+  .plan-attempts{font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .plan-price{font-size:1.7rem;font-weight:700;color:var(--ink);line-height:1.1;}
+  .plan-period{font-size:.8rem;color:var(--muted);}
+  .plan-unit{font-size:.75rem;color:var(--muted);margin-bottom:.5rem;}
+  .plan-card .plan-buy{width:100%;min-width:0;margin-top:auto;}
+  .plan-hint{font-size:.8rem;color:var(--muted);}
+
+  /* Раскрывающийся блок: честные ожидания читают те, кому это важно, а
+     остальным он не мешает принять решение. */
+  .expect-box{
+    text-align:left;margin:1rem 0 .75rem;border:1px solid var(--rule);
+    border-radius:10px;background:var(--card);
+  }
+  .expect-box summary{
+    cursor:pointer;padding:.7rem .9rem;font-size:.88rem;font-weight:600;color:var(--ink);
+  }
+  .expect-box[open] summary{border-bottom:1px solid var(--rule);}
+  .expect-body{padding:.8rem .9rem;font-size:.85rem;line-height:1.6;color:var(--ink);}
+  .expect-body ul{margin:.3rem 0 .8rem 1.1rem;}
+  .expect-body li{margin:.3rem 0;}
+  .expect-promise{
+    margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--rule);color:var(--stamp-teal);
+  }
+  .pay-methods{font-size:.78rem;color:var(--muted);max-width:52ch;margin-inline:auto;}
+
+  /* --- Футер и юридические документы ---------------------------------- */
+  .site-footer{margin-top:2rem;}
+  .footer-legal{
+    margin-top:1rem;padding-top:1rem;border-top:1px solid var(--rule);
+    font-size:.75rem;color:var(--muted);line-height:1.7;text-align:center;
+  }
+  .footer-legal a{color:var(--muted);}
+  .footer-links{margin:.35rem 0;}
+  .footer-links .link-btn{font-size:.75rem;}
+  .footer-pay{letter-spacing:.06em;text-transform:uppercase;font-size:.7rem;}
+  #legalContent h2{font-size:1.1rem;margin-bottom:.6rem;}
+  #legalContent h3{font-size:.92rem;margin:1rem 0 .3rem;color:var(--ink);}
+  #legalContent p,#legalContent li{font-size:.85rem;line-height:1.65;color:var(--ink);}
+  #legalContent ul{margin:.3rem 0 .3rem 1.1rem;}
+  #legalContent .legal-meta{font-size:.75rem;color:var(--muted);margin-bottom:.8rem;}
 </style>
 </head>
 <body>
@@ -341,10 +397,37 @@
     <div id="speakingPane" style="display:none">
 
       <div class="paywall" id="speakingPaywall" style="display:none">
-        <h3>Speaking practice is a paid feature</h3>
-        <p>Writing practice stays free and unlimited. Speaking adds recording, transcription, and examiner-style feedback on your spoken responses.</p>
-        <p id="paywallReason">Ask your teacher to activate speaking for your account.</p>
-        <button type="button" class="primary" id="subscribeBtn" style="display:none">Subscribe</button>
+        <h3>Разговорная практика — платный раздел</h3>
+        <p class="paywall-lead">Письменная часть остаётся бесплатной и без ограничений. В разговорной вы записываете устный ответ, получаете расшифровку и разбор по критериям вашего экзамена.</p>
+        <p id="paywallReason" class="paywall-reason"></p>
+
+        <div class="plan-grid" id="planGrid"></div>
+        <p class="plan-hint" id="planHint"></p>
+
+        <!-- Честно о том, что это такое. Обещать больше, чем система реально измеряет,
+             значит однажды объяснять ученику, почему оценка не совпала с настоящей. -->
+        <details class="expect-box">
+          <summary>Что вы получите — и чего эта система не делает</summary>
+          <div class="expect-body">
+            <p><strong>Что вы действительно получаете:</strong></p>
+            <ul>
+              <li>Задания в формате вашего экзамена, с реальными лимитами времени на подготовку и ответ.</li>
+              <li>Полную расшифровку вашего ответа — видно, что вы сказали на самом деле, а не как вам показалось.</li>
+              <li>Оценку по официальным критериям экзамена, с объяснением по каждому критерию и конкретными формулировками, которые стоит исправить.</li>
+              <li>Возможность повторять одно и то же задание столько раз, сколько нужно, без неловкости перед живым человеком.</li>
+            </ul>
+            <p><strong>Чего мы не делаем, и не будем делать вид, что делаем:</strong></p>
+            <ul>
+              <li>Это <em>не</em> официальный балл. Настоящую оценку ставит только экзаменационный центр. Здесь — тренировка и ориентир.</li>
+              <li>Произношение оценивается по темпу речи, паузам и общему впечатлению модели, а не пофонемно. Это полезный сигнал, но не фонетическая экспертиза.</li>
+              <li>Алгоритм DET закрыт производителем, поэтому оценка по нему — приближение по опубликованным критериям.</li>
+              <li>Живой преподаватель слышит то, чего не слышит модель. Это дополнение к занятиям, а не замена им.</li>
+            </ul>
+            <p class="expect-promise">Если раздел не заработал так, как здесь описано, напишите нам — разберёмся и вернём деньги за неиспользованные ответы. Условия возврата — в оферте внизу страницы.</p>
+          </div>
+        </details>
+
+        <p class="pay-methods">Оплата картами <strong>МИР, VISA, MasterCard</strong> через ЮKassa. Данные карты вводятся на защищённой странице платёжного сервиса — мы их не получаем и не храним. Соединение защищено SSL, платёжный провайдер сертифицирован по PCI DSS.</p>
       </div>
 
       <div id="speakingWorkspace" style="display:none">
@@ -417,10 +500,33 @@
     </div>
   </section>
 
-  <footer class="note">
-    Graded by AI against exam-specific criteria — use it for practice, not as an official score.<br>
-    <button class="link-btn" id="howWeGradeBtn" type="button">How is this graded?</button>
+  <footer class="site-footer">
+    <p class="note">
+      Graded by AI against exam-specific criteria — use it for practice, not as an official score.<br>
+      <button class="link-btn" id="howWeGradeBtn" type="button">How is this graded?</button>
+    </p>
+
+    <!-- Реквизиты и документы. ЮKassa проверяет их наличие при подключении
+         интернет-эквайринга, и без них заявку не одобрят. Значения подставляются
+         из MERCHANT в скрипте ниже — заполните их там, в одном месте. -->
+    <div class="footer-legal">
+      <p class="footer-req" id="footerRequisites"></p>
+      <p class="footer-contacts" id="footerContacts"></p>
+      <p class="footer-links">
+        <button class="link-btn" type="button" data-legal="offer">Публичная оферта</button> ·
+        <button class="link-btn" type="button" data-legal="privacy">Политика конфиденциальности</button> ·
+        <button class="link-btn" type="button" data-legal="refund">Условия возврата</button>
+      </p>
+      <p class="footer-pay">Приём оплаты: МИР · VISA · MasterCard</p>
+    </div>
   </footer>
+
+  <div class="modal-overlay" id="legalOverlay">
+    <div class="modal-box">
+      <button class="modal-close" id="closeLegalModal" type="button" aria-label="Закрыть">&times;</button>
+      <div id="legalContent"></div>
+    </div>
+  </div>
 
   <div class="modal-overlay" id="gradeModalOverlay">
     <div class="modal-box">
@@ -449,7 +555,121 @@ const BACKEND_URL = "https://exam-scorer.kayuso2011.workers.dev/".replace(/\/+$/
 // *** Set this once YooKassa is live — the checkout link students are sent to. ***
 // Left empty until then, which hides the Subscribe button and leaves the paywall
 // telling students to contact their teacher instead.
+/* ============================================================================
+   ЗАПОЛНИТЕ ЭТО ПЕРЕД ПОДКЛЮЧЕНИЕМ ЮKASSA
+   ----------------------------------------------------------------------------
+   Шесть полей ниже — единственное, что нужно вписать руками. Они попадают в
+   футер, в оферту и в политику конфиденциальности сразу, поэтому менять их
+   нужно только здесь.
+
+   ЮKassa проверяет наличие этих данных на сайте при рассмотрении заявки на
+   интернет-эквайринг. Пока в полях стоит "___", заявку почти наверняка вернут.
+   ============================================================================ */
+const MERCHANT = {
+  legalName: "Индивидуальный предприниматель ОЛАДИПУПО ДЖОРДЖ ОЛУКАЙОДЕ ОЛУЙОРИ",   // как в свидетельстве: ИП Фамилия Имя Отчество
+  inn: "463256962675",                                        // ИНН
+  ogrnip: "323460000043799",                                     // ОГРНИП
+  address: "Парниковая улица, 5, Курск, Курская Область, Россия, 305023",                                    // адрес регистрации
+  phone: "+79207172713",                                      // телефон для связи, в формате +7 ...
+  email: "kayuso2003@hotmail.com",                                      // почта для связи
+};
+
+// Ссылка на внешнюю страницу оплаты. Пусто = оплата идёт через /payments/create,
+// то есть через ЮKassa напрямую. Оставьте пустым, если не знаете, зачем менять.
 const SPEAKING_PAYMENT_URL = "";
+
+function merchantIsConfigured() {
+  return Object.values(MERCHANT).every((v) => v && !String(v).includes("___"));
+}
+
+/* Юридические документы. Это рабочие черновики, покрывающие то, что ЮKassa
+   ожидает увидеть, — но они не проверены юристом, а вы продаёте реальную услугу
+   реальным людям. Прочитайте их и при необходимости поправьте под себя. */
+const LEGAL_DOCS = {
+  offer: {
+    title: "Публичная оферта",
+    html: `
+      <p class="legal-meta">Редакция от ${new Date().toISOString().slice(0, 10)}</p>
+      <p>Настоящий документ является публичной офертой ${MERCHANT.legalName} (ИНН ${MERCHANT.inn}, ОГРНИП ${MERCHANT.ogrnip}), далее — «Исполнитель», и содержит условия оказания услуг сервиса подготовки к языковым экзаменам, далее — «Сервис».</p>
+
+      <h3>1. Предмет</h3>
+      <p>Исполнитель предоставляет доступ к Сервису для самостоятельной подготовки к экзаменам по английскому языку. Письменная часть предоставляется бесплатно. Разговорная часть предоставляется на платной основе пакетами проверенных устных ответов.</p>
+
+      <h3>2. Что входит в оплаченный пакет</h3>
+      <p>Пакет включает фиксированное количество проверенных устных ответов («ответов») и срок, в течение которого их можно использовать. Количество и стоимость указаны на странице оплаты в рублях. Один ответ расходуется в момент, когда запись успешно расшифрована и передана на проверку. Если запись не содержит распознаваемой речи, ответ не расходуется.</p>
+
+      <h3>3. Характер оценки</h3>
+      <p>Оценка формируется автоматически на основании критериев соответствующего экзамена и носит учебный характер. Она <strong>не является</strong> официальным результатом экзамена и не может использоваться как таковой. Официальную оценку выставляет только экзаменационный центр.</p>
+
+      <h3>4. Оплата</h3>
+      <p>Оплата производится банковской картой через платёжный сервис ЮKassa. Исполнитель не получает и не хранит данные карты. Доступ открывается автоматически после подтверждения платежа платёжным сервисом.</p>
+
+      <h3>5. Возврат</h3>
+      <p>Условия возврата приведены в отдельном документе «Условия возврата» и являются неотъемлемой частью настоящей оферты.</p>
+
+      <h3>6. Ограничения</h3>
+      <p>Доступ предоставляется одному пользователю по персональному коду. Передача кода третьим лицам является основанием для прекращения доступа без возврата средств за использованные ответы.</p>
+
+      <h3>7. Реквизиты</h3>
+      <p>${MERCHANT.legalName}<br>ИНН ${MERCHANT.inn}<br>ОГРНИП ${MERCHANT.ogrnip}<br>Адрес: ${MERCHANT.address}<br>Телефон: ${MERCHANT.phone}<br>Электронная почта: ${MERCHANT.email}</p>
+    `,
+  },
+  privacy: {
+    title: "Политика конфиденциальности и обработки персональных данных",
+    html: `
+      <p class="legal-meta">Редакция от ${new Date().toISOString().slice(0, 10)}</p>
+      <p>Оператор персональных данных: ${MERCHANT.legalName}, ИНН ${MERCHANT.inn}, адрес: ${MERCHANT.address}.</p>
+
+      <h3>1. Какие данные обрабатываются</h3>
+      <ul>
+        <li>Код ученика, выданный преподавателем, и имя, под которым он записан.</li>
+        <li>Тексты ваших письменных работ и расшифровки устных ответов.</li>
+        <li>Аудиозаписи ваших устных ответов — на время, необходимое для расшифровки.</li>
+        <li>История проверок и выставленных оценок.</li>
+        <li>Идентификатор платежа, полученный от платёжного сервиса. Данные банковской карты Оператору не передаются.</li>
+      </ul>
+
+      <h3>2. Зачем</h3>
+      <p>Исключительно для оказания услуги: проверки работ, отображения вашей истории и подтверждения оплаченного доступа.</p>
+
+      <h3>3. Кому передаются</h3>
+      <p>Тексты и расшифровки передаются поставщикам моделей искусственного интеллекта для формирования оценки. Данные платежа обрабатываются ЮKassa. Оператор не продаёт персональные данные и не передаёт их для рекламных целей.</p>
+
+      <h3>4. Сроки</h3>
+      <p>История проверок хранится, пока действует ваш учебный доступ. Аудиозапись не сохраняется после получения расшифровки.</p>
+
+      <h3>5. Ваши права</h3>
+      <p>Вы вправе запросить сведения об обрабатываемых данных, их исправление или удаление, а также отозвать согласие на обработку, направив запрос на ${MERCHANT.email}. Отзыв согласия влечёт прекращение оказания услуги.</p>
+
+      <h3>6. Cookie и хранение в браузере</h3>
+      <p>Сервис сохраняет в вашем браузере код ученика и аудиозаписи заданий, которые вы уже прослушали, — чтобы не запрашивать их повторно. Эти данные остаются на вашем устройстве и Оператору не передаются.</p>
+    `,
+  },
+  refund: {
+    title: "Условия возврата",
+    html: `
+      <p class="legal-meta">Редакция от ${new Date().toISOString().slice(0, 10)}</p>
+      <h3>Как оказывается услуга</h3>
+      <p>Услуга оказывается в электронном виде. Доступ открывается сразу после подтверждения оплаты — доставка не требуется, географических ограничений нет.</p>
+
+      <h3>Когда можно вернуть деньги</h3>
+      <ul>
+        <li><strong>Ответы не использованы.</strong> Если вы не израсходовали ни одного ответа из пакета, возврат производится в полном объёме.</li>
+        <li><strong>Пакет использован частично.</strong> Возвращается стоимость неиспользованных ответов, рассчитанная пропорционально.</li>
+        <li><strong>Сервис не работал.</strong> Если из-за технической неисправности на нашей стороне вы не смогли воспользоваться оплаченными ответами, возвращается полная стоимость независимо от расхода.</li>
+      </ul>
+
+      <h3>Что не подлежит возврату</h3>
+      <p>Несогласие с автоматической оценкой само по себе не является основанием для возврата: услуга состоит в проверке и разборе ответа, а не в получении определённого балла. Если вы считаете оценку ошибочной, напишите нам — мы разберём работу вручную.</p>
+
+      <h3>Как запросить</h3>
+      <p>Напишите на ${MERCHANT.email} или по телефону ${MERCHANT.phone}, указав код ученика и дату оплаты. Ответ — в течение 3 рабочих дней. Возврат производится тем же способом, которым была произведена оплата, в срок до 10 рабочих дней.</p>
+
+      <h3>Реквизиты</h3>
+      <p>${MERCHANT.legalName}<br>ИНН ${MERCHANT.inn}<br>ОГРНИП ${MERCHANT.ogrnip}<br>${MERCHANT.address}</p>
+    `,
+  },
+};
 
 const EXAM_GROUPS = [
   { label: "International", exams: ["ielts", "toefl", "det"] },
@@ -1122,10 +1342,95 @@ function setRecActions(buttons) {
 function showPaywall(reasonText) {
   document.getElementById("speakingPaywall").style.display = "";
   document.getElementById("speakingWorkspace").style.display = "none";
-  document.getElementById("paywallReason").textContent =
-    reasonText || "Ask your teacher to activate speaking for your account.";
-  const btn = document.getElementById("subscribeBtn");
-  btn.style.display = SPEAKING_PAYMENT_URL ? "" : "none";
+  const reason = document.getElementById("paywallReason");
+  reason.textContent = reasonText || "";
+  reason.style.display = reasonText ? "" : "none";
+  renderPlans();
+}
+
+/* ---- Plans and checkout -------------------------------------------------
+
+   Prices are fetched from the Worker rather than written into this page. The
+   number a student is shown and the number the payment is actually created for
+   have to come from one place, or one day they won't match — and the one that
+   would be wrong is the one on screen, which is the one they'd argue about. */
+
+let cachedPlans = null;
+let checkoutInFlight = false;
+
+async function loadPlans() {
+  if (cachedPlans) return cachedPlans;
+  try {
+    const res = await fetch(`${BACKEND_URL}/plans`);
+    const data = await res.json();
+    if (Array.isArray(data.plans)) cachedPlans = data.plans;
+  } catch (_) { /* rendered as unavailable below */ }
+  return cachedPlans;
+}
+
+async function renderPlans() {
+  const grid = document.getElementById("planGrid");
+  const hint = document.getElementById("planHint");
+  const plans = await loadPlans();
+
+  if (!plans || !plans.length) {
+    grid.innerHTML = "";
+    hint.textContent = "Не удалось загрузить тарифы. Обновите страницу или напишите преподавателю.";
+    return;
+  }
+
+  const code = studentCodeInput.value.trim();
+  grid.innerHTML = plans.map((plan, i) => `
+    <div class="plan-card${i === 0 ? " plan-card-featured" : ""}">
+      <div class="plan-attempts">${plan.attempts} ответов</div>
+      <div class="plan-price">${plan.priceRub} ₽</div>
+      <div class="plan-period">на ${plan.months} мес.</div>
+      <div class="plan-unit">${Math.round(plan.priceRub / plan.attempts)} ₽ за ответ</div>
+      <button type="button" class="primary plan-buy" data-plan="${plan.id}">Оплатить</button>
+    </div>
+  `).join("");
+
+  hint.textContent = code
+    ? "Доступ откроется автоматически сразу после оплаты."
+    : "Сначала введите код ученика вверху страницы — доступ привязывается к нему.";
+
+  grid.querySelectorAll(".plan-buy").forEach((btn) => {
+    btn.disabled = !code;
+    btn.addEventListener("click", () => startCheckout(btn.dataset.plan, btn));
+  });
+}
+
+async function startCheckout(planId, button) {
+  const code = studentCodeInput.value.trim();
+  if (!code) { alert("Сначала введите код ученика вверху страницы."); return; }
+  if (checkoutInFlight) return;   // double-click would create a second payment
+
+  checkoutInFlight = true;
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = "Переходим к оплате…";
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/payments/create`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentCode: code, planId }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.confirmationUrl) {
+      alert(data.error || "Не удалось перейти к оплате. Попробуйте ещё раз через минуту.");
+      return;
+    }
+    // Same tab, not a popup: blockers eat popups, and a student who loses the
+    // checkout window has no obvious way back to it.
+    window.location.href = data.confirmationUrl;
+  } catch (_) {
+    alert("Не удалось связаться с сервером. Проверьте соединение и попробуйте ещё раз.");
+  } finally {
+    checkoutInFlight = false;
+    button.disabled = false;
+    button.textContent = original;
+  }
 }
 
 function showSpeakingWorkspace() {
@@ -1140,9 +1445,10 @@ function renderAccessNote() {
   parts.push(speakingAccess.expiresAt
     ? `Speaking active until ${new Date(speakingAccess.expiresAt).toLocaleDateString()}`
     : "Speaking active");
-  if (typeof speakingAccess.secondsUsed === "number" && typeof speakingAccess.secondsLimit === "number") {
-    const left = Math.max(0, speakingAccess.secondsLimit - speakingAccess.secondsUsed);
-    parts.push(`${formatDuration(left / 60)} of recording left`);
+  // Attempts, not minutes: that's what was sold, so that's what gets counted back.
+  if (typeof speakingAccess.attemptsRemaining === "number") {
+    const left = speakingAccess.attemptsRemaining;
+    parts.push(left === 1 ? "остался 1 ответ" : `осталось ${left} ответов`);
   }
   note.textContent = parts.join(" · ");
   note.style.display = "";
@@ -1172,9 +1478,54 @@ async function refreshSpeakingAccess() {
   }
 }
 
-document.getElementById("subscribeBtn").addEventListener("click", () => {
-  if (SPEAKING_PAYMENT_URL) window.open(SPEAKING_PAYMENT_URL, "_blank", "noopener");
+/* ---- Footer requisites and legal documents ------------------------------ */
+
+function renderFooterRequisites() {
+  const req = document.getElementById("footerRequisites");
+  const contacts = document.getElementById("footerContacts");
+  if (!merchantIsConfigured()) {
+    // Loud on purpose. A footer that silently renders "ИНН ___" is exactly what gets
+    // a YooKassa application rejected, and it's invisible if you're not looking for it.
+    req.innerHTML = '<strong style="color:#b45309">Реквизиты не заполнены — откройте index.html и заполните MERCHANT перед подачей заявки в ЮKassa.</strong>';
+    contacts.textContent = "";
+    return;
+  }
+  req.textContent = `${MERCHANT.legalName} · ИНН ${MERCHANT.inn} · ОГРНИП ${MERCHANT.ogrnip} · ${MERCHANT.address}`;
+  contacts.innerHTML =
+    `Телефон: <a href="tel:${MERCHANT.phone.replace(/[^+\d]/g, "")}">${MERCHANT.phone}</a> · ` +
+    `E-mail: <a href="mailto:${MERCHANT.email}">${MERCHANT.email}</a>`;
+}
+
+function openLegal(key) {
+  const doc = LEGAL_DOCS[key];
+  if (!doc) return;
+  document.getElementById("legalContent").innerHTML = `<h2>${doc.title}</h2>${doc.html}`;
+  document.getElementById("legalOverlay").classList.add("visible");
+}
+
+document.querySelectorAll("[data-legal]").forEach((btn) => {
+  btn.addEventListener("click", () => openLegal(btn.dataset.legal));
 });
+document.getElementById("closeLegalModal").addEventListener("click", () => {
+  document.getElementById("legalOverlay").classList.remove("visible");
+});
+document.getElementById("legalOverlay").addEventListener("click", (e) => {
+  if (e.target.id === "legalOverlay") e.currentTarget.classList.remove("visible");
+});
+
+renderFooterRequisites();
+
+// Coming back from YooKassa's confirmation page: the webhook may not have landed yet,
+// so poll briefly rather than telling a student who just paid that they haven't.
+// The Worker is the authority either way — this only decides what the screen says.
+if (/[?&]paid=1/.test(location.search)) {
+  let tries = 0;
+  const poll = setInterval(async () => {
+    tries += 1;
+    await refreshSpeakingAccess();
+    if ((speakingAccess && speakingAccess.hasAccess) || tries >= 10) clearInterval(poll);
+  }, 2000);
+}
 
 // --- Recorder lifecycle ---------------------------------------------------
 

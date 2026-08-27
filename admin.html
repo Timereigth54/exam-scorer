@@ -103,8 +103,20 @@
     </div>
 
     <div class="card">
+      <h3 style="font-family:'Lora',serif;font-size:1rem;margin-bottom:.4rem">Backup</h3>
+      <p style="font-size:.82rem;color:var(--ink-soft);line-height:1.6;margin-bottom:.7rem">
+        Downloads every table — students, submissions, payments, the asset index — as one
+        JSON file. Nobody else is making this backup: Cloudflare does not snapshot D1 for
+        you, and the audio can always be regenerated while a record of who paid for what
+        cannot. Worth doing before any migration, and on a routine you actually keep.
+      </p>
+      <button id="exportBtn">Download backup</button>
+      <div class="new-code" id="exportStatus"></div>
+    </div>
+
+    <div class="card">
       <table id="rosterTable">
-        <thead><tr><th>Name</th><th>Code</th><th>Cohort</th><th>Quota</th><th>Audio (sec)</th><th>Speaking access</th><th>Last activity</th></tr></thead>
+        <thead><tr><th>Name</th><th>Code</th><th>Cohort</th><th>Quota</th><th>Speaking answers</th><th>Audio (sec)</th><th>Speaking access</th><th>Last activity</th></tr></thead>
         <tbody id="rosterBody"></tbody>
       </table>
     </div>
@@ -193,6 +205,32 @@ function describeSpeaking(s) {
   };
 }
 
+document.getElementById("exportBtn").addEventListener("click", async () => {
+  const status = document.getElementById("exportStatus");
+  if (!adminKey) { alert("Enter your admin key first."); return; }
+  status.textContent = "Preparing…";
+  try {
+    const res = await fetch(`${BACKEND_URL}/admin/export`, { headers: authHeaders() });
+    if (!res.ok) {
+      status.textContent = res.status === 401 ? "Admin key rejected." : `Export failed (${res.status}).`;
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `exam-scorer-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Revoking immediately can cancel the download in some browsers; give it a moment.
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    status.textContent = `Saved (${(blob.size / 1024).toFixed(0)} KB). Keep it somewhere that isn't this laptop.`;
+  } catch (e) {
+    status.textContent = "Couldn't reach the server: " + e.message;
+  }
+});
+
 async function loadRoster() {
   try {
     const res = await fetch(`${BACKEND_URL}/admin/students`, { headers: authHeaders() });
@@ -208,6 +246,11 @@ async function loadRoster() {
       const overQuota = s.submission_count >= limit;
       const audioUsed = s.speaking_seconds_used ?? 0;
       const overAudio = audioUsed >= secondsLimit;
+      // Graded answers are what's actually sold now; seconds are the abuse guard behind
+      // them. Both are shown because a student stuck on either needs a different fix.
+      const attemptsUsed = s.speaking_attempts_used ?? 0;
+      const attemptsLimit = s.speaking_attempts_limit ?? 0;
+      const outOfAttempts = attemptsLimit > 0 && attemptsUsed >= attemptsLimit;
       const speak = describeSpeaking(s);
       // Revoking clears the flag but keeps the dates, so this line has to read
       // correctly for a revoked student too — hence "last granted", not "granted".
@@ -219,6 +262,9 @@ async function loadRoster() {
         <td${overQuota ? ' style="color:#C84B31;font-weight:600"' : ""}>${escapeHtml(String(s.submission_count))}/${escapeHtml(String(limit))}
           <button type="button" class="row-btn add-attempts-btn">+5</button>
           <button type="button" class="row-btn set-limit-btn" data-limit="${escapeHtml(String(limit))}">set…</button>
+        </td>
+        <td${outOfAttempts ? ' style="color:#C84B31;font-weight:600"' : ""}>${escapeHtml(String(attemptsUsed))}/${escapeHtml(String(attemptsLimit))}
+          <button type="button" class="row-btn add-answers-btn">+10</button>
         </td>
         <td${overAudio ? ' style="color:#C84B31;font-weight:600"' : ""}>${escapeHtml(String(audioUsed))}/${escapeHtml(String(secondsLimit))}
           <button type="button" class="row-btn reset-audio-btn">reset</button>
@@ -249,8 +295,20 @@ async function loadRoster() {
       tr.querySelectorAll("button, select").forEach(el => el.addEventListener("click", (e) => e.stopPropagation()));
 
       tr.querySelector(".reset-audio-btn").addEventListener("click", async () => {
-        if (!confirm(`Reset ${s.name}'s used audio seconds back to 0?`)) return;
+        if (!confirm(`Reset ${s.name}'s used audio seconds AND graded answers back to 0?`)) return;
         if (await adminPost(`/admin/students/${encodeURIComponent(s.code)}/reset-speaking`)) loadRoster();
+      });
+
+      // Adds answers without touching the expiry — the two are independent, and a
+      // student who ran out mid-month shouldn't have to buy time they already have.
+      tr.querySelector(".add-answers-btn").addEventListener("click", async () => {
+        if (!confirm(`Give ${s.name} 10 more graded speaking answers?`)) return;
+        // Preserve whatever expiry they already have; a null expiry means lifetime,
+        // and the Worker rejects months+expiresAt together, so send exactly one.
+        const payload = s.speaking_expires_at
+          ? { attempts: 10, expiresAt: s.speaking_expires_at }
+          : { attempts: 10, lifetime: true };
+        if (await adminPost(`/admin/students/${encodeURIComponent(s.code)}/grant-speaking`, payload)) loadRoster();
       });
 
       tr.querySelector(".grant-btn").addEventListener("click", async () => {
