@@ -297,6 +297,30 @@
   .plan-unit{font-size:.75rem;color:var(--muted);margin-bottom:.5rem;}
   .plan-card .plan-buy{width:100%;min-width:0;margin-top:auto;}
   .plan-hint{font-size:.8rem;color:var(--muted);}
+
+  /* --- Публичный каталог услуг и цен ---------------------------------
+     ЮKassa проверяет сайт глазами: прайс должен быть виден сразу, без кода
+     ученика и без захода в платный раздел. Карточки тарифов внутри paywall
+     этого не дают — они скрыты до момента, когда студент упрётся в оплату. */
+  .top-pricing-link{margin-top:.5rem;font-size:.8rem;}
+  .top-pricing-link a{color:var(--muted);}
+  .price-card{margin-top:1.5rem;}
+  .price-card h2{font-family:'Lora',serif;font-size:1.3rem;margin-bottom:.4rem;}
+  .price-card p{font-size:.88rem;line-height:1.6;color:var(--ink);margin:.4rem 0;}
+  .price-table-wrap{overflow-x:auto;margin:1rem 0 .6rem;}
+  .price-table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:520px;}
+  .price-table th,.price-table td{
+    border:1px solid var(--rule);padding:.6rem .7rem;text-align:left;vertical-align:top;
+  }
+  .price-table th{
+    background:var(--card);font-size:.75rem;text-transform:uppercase;
+    letter-spacing:.04em;color:var(--ink-soft);font-weight:700;
+  }
+  .price-table .price-value{white-space:nowrap;font-weight:700;font-size:1.05rem;}
+  .price-table .price-free{color:var(--stamp-teal);}
+  .price-table td .price-buy{width:auto;min-width:0;margin:0;padding:.4rem .8rem;font-size:.8rem;}
+  .price-sub{font-size:.78rem;color:var(--muted);margin-top:.15rem;}
+  .price-steps{font-size:.85rem;line-height:1.7;color:var(--ink);margin:.4rem 0 .4rem 1.1rem;}
   .plan-unit-note{
     font-size:.82rem;line-height:1.65;color:var(--ink);text-align:left;
     background:var(--card);border:1px solid var(--rule);border-radius:10px;
@@ -344,6 +368,7 @@
   <header class="top">
     <h1>Exam Prep</h1>
     <p>Writing &amp; speaking practice, graded against real exam criteria</p>
+    <p class="top-pricing-link"><a href="#pricing">Тарифы и цены · Оплата</a></p>
   </header>
 
   <section class="card">
@@ -532,6 +557,58 @@
     </div>
   </section>
 
+  <!-- Каталог услуг с фиксированными ценами. Виден всем и всегда: без него
+       заявку на эквайринг возвращают («на сайте не представлен каталог
+       товаров или услуг»). Цены подставляются из /plans, чтобы экран и
+       платёж считались из одного места. -->
+  <section class="card price-card" id="pricingSection">
+    <h2 id="pricing">Каталог услуг и цены</h2>
+    <p>
+      Сервис проверяет письменные и устные ответы к языковым экзаменам (IELTS, TOEFL iBT,
+      Duolingo English Test, Cambridge, ОГЭ и ЕГЭ) и выдаёт разбор по официальным критериям
+      экзамена. <strong>Онлайн оплачивается только доступ к разговорной практике</strong> —
+      пакет из фиксированного числа заданий на один месяц. Проверка письменных работ
+      бесплатна и оплаты не требует.
+    </p>
+
+    <div class="price-table-wrap">
+      <table class="price-table">
+        <thead>
+          <tr>
+            <th>Услуга</th>
+            <th>Что входит</th>
+            <th>Цена</th>
+            <th>Оплата</th>
+          </tr>
+        </thead>
+        <tbody id="priceRows"></tbody>
+      </table>
+    </div>
+
+    <p class="price-sub" id="priceStatus"></p>
+
+    <p><strong>Одно задание — это целая часть экзамена целиком</strong>, а не один вопрос.
+      Например, «Take an Interview» в TOEFL — это все 4 вопроса подряд, IELTS Part 1 — все 5.
+      Тренировка «Listen and Repeat» не расходует задания вообще.
+      Неиспользованные задания сгорают по окончании месяца доступа.</p>
+
+    <p><strong>Как оплатить:</strong></p>
+    <ol class="price-steps">
+      <li>Получите код ученика у преподавателя и введите его в поле «Your code» вверху страницы.</li>
+      <li>Нажмите «Оплатить» напротив нужного пакета — откроется защищённая страница ЮKassa.</li>
+      <li>После оплаты доступ к разговорной практике открывается автоматически, в течение минуты.</li>
+    </ol>
+
+    <p class="pay-methods" style="margin:.6rem 0 0;text-align:left">
+      Цены указаны в рублях РФ и являются окончательными. Оплата картами
+      <strong>МИР, VISA, MasterCard</strong> через ЮKassa. Данные карты вводятся на защищённой
+      странице платёжного сервиса — мы их не получаем и не храним. Соединение защищено SSL,
+      платёжный провайдер сертифицирован по PCI DSS. Условия оказания услуг — в
+      <button class="link-btn" type="button" data-legal="offer">публичной оферте</button>,
+      порядок возврата — в <button class="link-btn" type="button" data-legal="refund">условиях возврата</button>.
+    </p>
+  </section>
+
   <footer class="site-footer">
     <p class="note">
       Graded by AI against exam-specific criteria — use it for practice, not as an official score.<br>
@@ -545,6 +622,7 @@
       <p class="footer-req" id="footerRequisites"></p>
       <p class="footer-contacts" id="footerContacts"></p>
       <p class="footer-links">
+        <a href="#pricing">Тарифы и цены</a> ·
         <button class="link-btn" type="button" data-legal="offer">Публичная оферта</button> ·
         <button class="link-btn" type="button" data-legal="privacy">Политика конфиденциальности</button> ·
         <button class="link-btn" type="button" data-legal="refund">Условия возврата</button>
@@ -1653,6 +1731,60 @@ document.getElementById("legalOverlay").addEventListener("click", (e) => {
 });
 
 renderFooterRequisites();
+
+/* ---- Публичный каталог услуг -------------------------------------------
+
+   Тот же источник цен, что и у paywall (/plans), но виден без кода ученика и
+   без входа в платный раздел: прайс, который нельзя увидеть, для проверки
+   эквайринга всё равно что отсутствует. */
+
+async function renderPricing() {
+  const rows = document.getElementById("priceRows");
+  const status = document.getElementById("priceStatus");
+  if (!rows) return;
+
+  const free = `
+    <tr>
+      <td>Проверка письменных работ<div class="price-sub">Writing — все экзамены</div></td>
+      <td>Проверка эссе, писем и сочинений с оценкой по критериям экзамена, разбором ошибок и образцом ответа. Без ограничения по количеству.</td>
+      <td class="price-value price-free">0 ₽</td>
+      <td>Не требуется</td>
+    </tr>`;
+
+  const plans = await loadPlans();
+  if (!plans || !plans.length) {
+    rows.innerHTML = free;
+    status.innerHTML = 'Не удалось загрузить актуальные цены на разговорную практику. ' +
+      '<button type="button" class="link-btn" id="priceRetry">Обновить</button>';
+    const retry = document.getElementById("priceRetry");
+    if (retry) retry.addEventListener("click", () => { cachedPlans = null; renderPricing(); });
+    return;
+  }
+
+  status.textContent = "";
+  rows.innerHTML = free + plans.map((plan) => `
+    <tr>
+      <td>${plan.title}<div class="price-sub">Доступ на ${plan.months} мес.</div></td>
+      <td>${plan.description}. Запись устного ответа, расшифровка, оценка и разбор. Стоимость одного задания — ${Math.round(plan.priceRub / plan.attempts)} ₽.</td>
+      <td class="price-value">${plan.priceRub} ₽</td>
+      <td><button type="button" class="secondary price-buy" data-plan="${plan.id}">Оплатить</button></td>
+    </tr>
+  `).join("");
+
+  rows.querySelectorAll(".price-buy").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!studentCodeInput.value.trim()) {
+        // Без кода платить некуда — доступ привязывается к нему. Ведём к полю,
+        // а не оставляем человека перед молча ничего не делающей кнопкой.
+        studentCodeInput.scrollIntoView({ behavior: "smooth", block: "center" });
+        studentCodeInput.focus();
+      }
+      startCheckout(btn.dataset.plan, btn);
+    });
+  });
+}
+
+renderPricing();
 
 // Coming back from YooKassa's confirmation page: the webhook may not have landed yet,
 // so poll briefly rather than telling a student who just paid that they haven't.
