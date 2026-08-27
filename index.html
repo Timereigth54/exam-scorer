@@ -815,6 +815,10 @@ function showTaskMeta() {
   clearGeneratedPhoto();
   clearTimerUI();
   resetSpeakingFlow();
+  // The access note says whether THIS task consumes an attempt, so it has to be
+  // re-rendered when the task changes — otherwise "это задание бесплатное" follows the
+  // student from Listen-and-Repeat onto a task that very much is not free.
+  renderAccessNote();
 }
 
 // On a listening task the prompt must not be on screen — a student who can read the
@@ -1578,6 +1582,13 @@ function renderAccessNote() {
     const left = speakingAccess.attemptsRemaining;
     parts.push(left === 1 ? "осталось 1 задание" : `осталось ${left} заданий`);
   }
+  // A free task leaves that number untouched by design. Without saying so, a counter
+  // that doesn't move looks exactly like a counter that's broken — which is precisely
+  // how it was reported.
+  const currentTask = currentTaskMeta();
+  if (currentTask && currentTask.free) {
+    parts.push("это задание бесплатное и не расходует их");
+  }
   note.textContent = parts.join(" · ");
   note.style.display = "";
 }
@@ -2091,8 +2102,15 @@ async function submitForTranscription() {
 
     lastTranscript = data.transcript || "";
     if (speakingAccess) {
+      // The unit being sold is attempts; seconds are only the abuse ceiling. Both come
+      // back on every transcription, and BOTH have to be copied across — reading
+      // attemptsRemaining in the display while only refreshing secondsUsed here is
+      // what left the counter frozen on screen after a paid task.
       speakingAccess.secondsUsed = data.secondsUsed;
       speakingAccess.secondsLimit = data.secondsLimit;
+      if (typeof data.attemptsUsed === "number") speakingAccess.attemptsUsed = data.attemptsUsed;
+      if (typeof data.attemptsLimit === "number") speakingAccess.attemptsLimit = data.attemptsLimit;
+      if (typeof data.attemptsRemaining === "number") speakingAccess.attemptsRemaining = data.attemptsRemaining;
       renderAccessNote();
     }
 
