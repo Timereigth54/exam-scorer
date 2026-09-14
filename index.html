@@ -367,6 +367,7 @@
   .reading-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:.4rem;}
   .reading-passage{white-space:pre-wrap;line-height:1.75;font-size:.95rem;background:#fff;border:1px solid var(--paper-line);border-radius:10px;padding:1rem 1.1rem;max-height:60vh;overflow:auto;}
   .reading-q{border:1px solid var(--paper-line);border-radius:10px;padding:.7rem .85rem;margin-bottom:.6rem;background:#fff;}
+  .reading-q .rq-stimulus{max-height:none;margin-bottom:.6rem;background:var(--paper,#fcfbf7);font-size:.9rem;}
   .reading-q .rq-stem{font-weight:600;font-size:.92rem;margin-bottom:.45rem;line-height:1.5;}
   .reading-opt{display:flex;gap:.5rem;align-items:flex-start;padding:.25rem 0;font-size:.9rem;line-height:1.5;cursor:pointer;}
   .reading-opt input{margin-top:.25rem;flex-shrink:0;}
@@ -2819,9 +2820,20 @@ async function startReading() {
     if (!res.ok) { alert(data.error || "Не удалось загрузить задание."); return; }
 
     readingState = { bankId: data.bankId, format: data.format, items: data.items, answers: [] };
-    readingQs("readingPassage").textContent = data.passage;
+    readingQs("readingPassage").textContent = data.passage || "";
+    // A discrete-stimulus task (the SAT) has no shared passage — each question carries
+    // its own text, rendered above that question. Hide the whole left column rather than
+    // showing an empty box with a "Текст" heading over it.
+    const passageColumn = readingQs("readingPassage").parentElement;
+    if (passageColumn) passageColumn.style.display = data.passage ? "" : "none";
     readingQs("readingPassageLabel").textContent = data.format === "matching" ? "Тексты" : "Текст";
-    readingQs("readingQuestionsLabel").textContent = data.format === "matching" ? "Подберите заголовки" : "Вопросы";
+    // TFNS items are stored in the same shape as multiple choice and render through the
+    // same radio-button path, so only the heading changes: they are statements to judge,
+    // not questions to answer, and calling them "Вопросы" would misdescribe the task.
+    readingQs("readingQuestionsLabel").textContent =
+      data.format === "matching" ? "Подберите заголовки"
+      : data.format === "tfns" ? "Отметьте, верны ли утверждения"
+      : "Вопросы";
     renderReadingQuestions(data);
     readingQs("readingWork").style.display = "";
     readingQs("readingWork").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2874,6 +2886,14 @@ function renderReadingQuestions(data) {
     const box = document.createElement("div");
     box.className = "reading-q";
     box.id = "rq-" + i;
+    // Discrete-stimulus items carry their own text, which goes above the question.
+    if (item.stimulus) {
+      const text = document.createElement("div");
+      text.className = "reading-passage rq-stimulus";
+      text.textContent = item.stimulus;
+      box.appendChild(text);
+    }
+
     const stem = document.createElement("div");
     stem.className = "rq-stem";
     stem.textContent = `${i + 1}. ${item.q}`;
