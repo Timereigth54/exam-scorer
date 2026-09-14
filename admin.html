@@ -70,6 +70,43 @@
   .hc-correction{background:#FBEDE8;border-left:3px solid #C84B31;border-radius:6px;padding:.4rem .6rem;margin-bottom:.3rem;}
   .hc-suggestion{background:var(--stamp-teal-bg);border-left:3px solid var(--stamp-teal);border-radius:6px;padding:.4rem .6rem;margin-bottom:.3rem;}
   .hc-tag{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;background:#C84B31;color:#fff;border-radius:5px;padding:.05rem .35rem;margin-right:.3rem;}
+  .bank-select{width:100%;padding:.6rem .7rem;border:1px solid var(--paper-line);border-radius:10px;font-size:.92rem;font-family:inherit;background:#fff;color:var(--ink);}
+  .bank-group{display:flex;align-items:center;gap:.75rem;padding:.6rem .7rem;border:1px solid var(--paper-line);border-radius:10px;margin-bottom:.5rem;font-size:.86rem;flex-wrap:wrap;}
+  .bank-group .bg-tasks{font-weight:700;width:92px;flex-shrink:0;white-space:nowrap;}
+  .bank-group .bg-what{color:var(--ink-soft);flex:1;min-width:150px;}
+  .bank-group .bg-counts{color:var(--ink-faint);font-size:.76rem;}
+  .bank-group button{font-size:.78rem;padding:.35rem .7rem;border-radius:8px;}
+  .bank-group.unsupported{opacity:.6;}
+  .bank-group .bg-soon{font-size:.72rem;color:var(--ink-faint);font-style:italic;}
+  .bank-note{font-size:.74rem;color:var(--ink-faint);margin-top:.5rem;}
+  .bank-divider{height:1px;background:var(--paper-line);margin:1.25rem 0 1rem;}
+  .bank-queue-head{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;flex-wrap:wrap;}
+  .bank-tabs{margin-left:auto;display:flex;gap:.3rem;}
+  .bank-tab{background:#fff;color:var(--ink-soft);border:1px solid var(--paper-line);font-size:.76rem;padding:.28rem .6rem;border-radius:8px;font-weight:600;}
+  .bank-tab.active{background:var(--stamp-teal);color:#fff;border-color:var(--stamp-teal);}
+  .bank-entry{border:1px solid var(--paper-line);border-radius:10px;margin-bottom:.6rem;overflow:hidden;}
+  .bank-entry-head{display:flex;gap:.6rem;align-items:center;padding:.6rem .8rem;cursor:pointer;font-size:.85rem;background:#fff;flex-wrap:wrap;}
+  .bank-entry-head:hover{background:var(--paper);}
+  .bank-entry-head .be-tasks{font-weight:700;}
+  .bank-entry-head .be-meta{color:var(--ink-faint);font-size:.76rem;}
+  .bank-verdict{margin-left:auto;font-size:.76rem;font-weight:700;padding:.15rem .5rem;border-radius:6px;}
+  .bank-verdict.good{background:var(--stamp-teal-bg);color:var(--stamp-teal);}
+  .bank-verdict.warn{background:#FBEDE8;color:#C84B31;}
+  .bank-body{display:none;padding:.9rem 1rem 1rem;background:var(--paper);border-top:1px solid var(--paper-line);}
+  .bank-body.open{display:block;}
+  .bank-warn{background:#FBEDE8;border-left:3px solid #C84B31;border-radius:6px;padding:.4rem .6rem;margin-bottom:.4rem;font-size:.8rem;}
+  .bank-passage{white-space:pre-wrap;background:#fff;border:1px solid var(--paper-line);border-radius:6px;padding:.6rem .7rem;font-size:.85rem;line-height:1.6;max-height:240px;overflow:auto;margin-bottom:.8rem;}
+  .bank-item{background:#fff;border:1px solid var(--paper-line);border-radius:8px;padding:.55rem .7rem;margin-bottom:.45rem;font-size:.84rem;}
+  .bank-item.disputed{border-color:#C84B31;background:#FEF7F5;}
+  .bank-item .bi-q{font-weight:600;margin-bottom:.3rem;}
+  .bank-opt{padding:.12rem 0 .12rem .9rem;color:var(--ink-soft);position:relative;}
+  .bank-opt.correct{color:var(--stamp-teal);font-weight:600;}
+  .bank-opt.correct:before{content:"✓";position:absolute;left:0;}
+  .bank-flag{font-size:.72rem;color:#C84B31;margin-top:.3rem;}
+  .bank-actions{display:flex;gap:.5rem;margin-top:.9rem;flex-wrap:wrap;}
+  .bank-actions button{font-size:.82rem;}
+  .bank-empty{color:var(--ink-faint);font-size:.85rem;padding:.6rem 0;}
+  .bank-busy{color:var(--stamp-teal);font-size:.82rem;padding:.4rem 0;}
 </style>
 </head>
 <body>
@@ -127,6 +164,45 @@
       <h4 style="font-size:.85rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin:1.25rem 0 .6rem">Submission history</h4>
       <div id="historyList"></div>
     </div>
+    <!-- Question bank: generate listening/reading material, then review it before any
+         student can see it. Nothing here is live until it is approved. -->
+    <div class="card" id="bankCard">
+      <h3 style="font-family:'Lora',serif;margin:0 0 .2rem">Reading &amp; listening bank</h3>
+      <p class="sub" style="margin-bottom:1rem">Generated material is checked automatically, then waits here for you. Students only ever see what you approve.</p>
+
+      <div class="row">
+        <div>
+          <label for="bankExam">Exam</label>
+          <select id="bankExam" class="bank-select">
+            <option value="ege">ЕГЭ (grade 11)</option>
+            <option value="oge">ОГЭ (grade 9)</option>
+          </select>
+        </div>
+        <div>
+          <label for="bankSkill">Section</label>
+          <select id="bankSkill" class="bank-select">
+            <option value="reading">Чтение (Reading)</option>
+            <option value="listening">Аудирование (Listening)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="bankGroups"></div>
+      <div class="bank-note" id="bankSpecNote"></div>
+
+      <div class="bank-divider"></div>
+
+      <div class="bank-queue-head">
+        <h4 style="margin:0;font-size:.95rem">Waiting for you</h4>
+        <div class="bank-tabs">
+          <button class="bank-tab active" data-status="draft">To review</button>
+          <button class="bank-tab" data-status="approved">Approved</button>
+          <button class="bank-tab" data-status="retired">Retired</button>
+        </div>
+      </div>
+      <div id="bankQueue"></div>
+    </div>
+
   </div>
 </div>
 
@@ -158,6 +234,8 @@ async function unlock() {
     document.getElementById("gate").style.display = "none";
     document.getElementById("app").style.display = "block";
     loadRoster();
+    loadBankGroups();
+    loadBankQueue();
   } catch (e) {
     alert("Couldn't reach the server: " + e.message + "\n\nCheck that BACKEND_URL near the top of this file's <script> is set to your actual Worker URL, not the placeholder.");
   }
@@ -492,6 +570,295 @@ document.getElementById("addBtn").addEventListener("click", async () => {
     alert("Couldn't reach the server to create the student: " + e.message);
   }
 });
+
+// --- Reading & listening bank ----------------------------------------------
+//
+// The teacher-facing half of the quality gate. The Worker checks every generated set
+// automatically — structure first, then a second model answering it cold — but the
+// last word is a human's, because an answer key nobody read is an answer key nobody
+// has checked.
+let bankStatus = "draft";
+let bankBusy = false;
+
+const BANK_SKILL_LABEL = { reading: "Чтение", listening: "Аудирование" };
+
+function bankQs(id) { return document.getElementById(id); }
+
+async function adminGet(path) {
+  try {
+    const res = await fetch(`${BACKEND_URL}${path}`, { headers: authHeaders() });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(data.error || `That didn't work (server returned ${res.status}).`); return null; }
+    return data;
+  } catch (err) {
+    alert("Couldn't reach the server: " + err.message);
+    return null;
+  }
+}
+
+async function loadBankGroups() {
+  const exam = bankQs("bankExam").value;
+  const skill = bankQs("bankSkill").value;
+  const host = bankQs("bankGroups");
+  host.innerHTML = '<div class="bank-busy">Loading…</div>';
+
+  const data = await adminGet(`/admin/bank/groups?exam=${encodeURIComponent(exam)}&skill=${encodeURIComponent(skill)}`);
+  if (!data) { host.innerHTML = '<div class="bank-empty">Could not load the section.</div>'; return; }
+
+  host.innerHTML = "";
+  for (const g of data.groups) {
+    const counts = g.counts || {};
+    const approved = counts.approved || 0;
+    const drafts = counts.draft || 0;
+    const row = document.createElement("div");
+    row.className = "bank-group" + (g.supported ? "" : " unsupported");
+
+    const tasks = g.taskFrom === g.taskTo ? `Task ${g.taskFrom}` : `Tasks ${g.taskFrom}–${g.taskTo}`;
+    const parts = [
+      `<div class="bg-tasks">${escapeHtml(tasks)}</div>`,
+      `<div class="bg-what">${escapeHtml(g.skillDescription || "")}<br><span class="bg-counts">${g.itemCount} ${g.format === "matching" ? "matches" : "questions"} · ${g.maxPoints} ${g.maxPoints === 1 ? "point" : "points"} · ${approved} approved, ${drafts} waiting</span></div>`,
+    ];
+    row.innerHTML = parts.join("");
+
+    if (g.supported) {
+      const btn = document.createElement("button");
+      btn.textContent = "Generate";
+      btn.addEventListener("click", () => generateBankEntry(g.taskFrom, btn));
+      row.appendChild(btn);
+    } else {
+      const note = document.createElement("div");
+      note.className = "bg-soon";
+      note.textContent = "this task type isn't built yet";
+      row.appendChild(note);
+    }
+    host.appendChild(row);
+  }
+
+  bankQs("bankSpecNote").textContent =
+    `${data.section.label} — tasks ${data.section.tasks[0]}–${data.section.tasks[1]}, ${data.section.maxPrimary} первичных баллов. Structure from the ФИПИ спецификация for ${data.section.specYear}.`;
+}
+
+async function generateBankEntry(taskFrom, btn) {
+  if (bankBusy) return;
+  bankBusy = true;
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Writing…";
+
+  // Three model calls back to back, so this is genuinely slow. Say so rather than
+  // letting the teacher wonder whether the click registered.
+  const note = document.createElement("div");
+  note.className = "bank-busy";
+  note.textContent = "Generating and checking — this takes up to a minute. Don't close the page.";
+  bankQs("bankGroups").appendChild(note);
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/admin/bank/generate`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ examKey: bankQs("bankExam").value, skill: bankQs("bankSkill").value, taskFrom }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 422) {
+      // An expected outcome, not a crash: the generator produces an unusable set often
+      // enough that this needs to read as "try again", not as a fault.
+      alert((data.message || "The generated set could not be used.") + " Nothing was saved — press Generate again.");
+    } else if (!res.ok) {
+      alert(data.error || `That didn't work (server returned ${res.status}).`);
+    } else {
+      bankStatus = "draft";
+      syncBankTabs();
+      await loadBankQueue();
+      const q = bankQs("bankQueue").querySelector(".bank-entry");
+      if (q) q.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  } catch (err) {
+    alert("Couldn't reach the server: " + err.message);
+  } finally {
+    note.remove();
+    btn.disabled = false;
+    btn.textContent = original;
+    bankBusy = false;
+    loadBankGroups();
+  }
+}
+
+function syncBankTabs() {
+  for (const tab of document.querySelectorAll(".bank-tab")) {
+    tab.classList.toggle("active", tab.dataset.status === bankStatus);
+  }
+}
+
+async function loadBankQueue() {
+  const host = bankQs("bankQueue");
+  host.innerHTML = '<div class="bank-busy">Loading…</div>';
+  const data = await adminGet(`/admin/bank?status=${encodeURIComponent(bankStatus)}`);
+  if (!data) { host.innerHTML = '<div class="bank-empty">Could not load the bank.</div>'; return; }
+
+  host.innerHTML = "";
+  if (!data.entries.length) {
+    host.innerHTML = `<div class="bank-empty">${bankStatus === "draft" ? "Nothing waiting. Generate a set above." : "Nothing here yet."}</div>`;
+    return;
+  }
+  data.entries.forEach((entry, i) => host.appendChild(renderBankEntry(entry, i)));
+}
+
+function renderBankEntry(entry, index) {
+  const wrap = document.createElement("div");
+  wrap.className = "bank-entry";
+
+  const agreed = entry.gate && typeof entry.gate.agreed === "number" ? entry.gate.agreed : null;
+  const total = entry.gate && typeof entry.gate.total === "number" ? entry.gate.total : null;
+  const clean = agreed !== null && total !== null && agreed === total && total > 0;
+  const verdict = agreed === null
+    ? { cls: "warn", text: "not checked" }
+    : clean
+      ? { cls: "good", text: `checker agreed ${agreed}/${total}` }
+      : { cls: "warn", text: `checker disagreed on ${total - agreed} of ${total}` };
+
+  const tasks = entry.taskFrom === entry.taskTo ? `Task ${entry.taskFrom}` : `Tasks ${entry.taskFrom}–${entry.taskTo}`;
+  const head = document.createElement("div");
+  head.className = "bank-entry-head";
+  head.innerHTML =
+    `<span class="be-tasks">${escapeHtml(tasks)}</span>` +
+    `<span class="be-meta">${escapeHtml(EXAM_LABELS[entry.examKey] || entry.examKey)} · ${escapeHtml(BANK_SKILL_LABEL[entry.skill] || entry.skill)} · ${entry.maxPoints} pts · ${escapeHtml(String(entry.createdAt || "").slice(0, 10))}</span>` +
+    `<span class="bank-verdict ${verdict.cls}">${escapeHtml(verdict.text)}</span>`;
+
+  const body = document.createElement("div");
+  body.className = "bank-body";
+  body.id = `bank-body-${index}`;
+  head.addEventListener("click", () => body.classList.toggle("open"));
+
+  for (const w of entry.warnings || []) {
+    const div = document.createElement("div");
+    div.className = "bank-warn";
+    div.textContent = warningText(w);
+    body.appendChild(div);
+  }
+
+  const passage = document.createElement("div");
+  passage.className = "bank-passage";
+  passage.textContent = entry.passage || "";
+  body.appendChild(passage);
+
+  const disputed = new Set();
+  if (agreed !== null && total !== null && !clean) {
+    // The list endpoint stores the tally, not the per-item detail, so which items were
+    // disputed is only known at generation time. Say that plainly instead of guessing.
+    const hint = document.createElement("div");
+    hint.className = "bank-flag";
+    hint.textContent = `The checking model disagreed with ${total - agreed} of ${total} answers. Read every question below before approving.`;
+    body.appendChild(hint);
+  }
+
+  body.appendChild(renderBankItems(entry, disputed));
+
+  const actions = document.createElement("div");
+  actions.className = "bank-actions";
+  if (entry.status !== "approved") {
+    const approve = document.createElement("button");
+    approve.textContent = "Approve for students";
+    approve.addEventListener("click", () => reviewBankEntry(entry.id, "approve", clean));
+    actions.appendChild(approve);
+  }
+  if (entry.status !== "retired") {
+    const retire = document.createElement("button");
+    retire.className = "ghost";
+    retire.textContent = entry.status === "approved" ? "Withdraw" : "Discard";
+    retire.addEventListener("click", () => reviewBankEntry(entry.id, "retire", true));
+    actions.appendChild(retire);
+  }
+  body.appendChild(actions);
+
+  wrap.appendChild(head);
+  wrap.appendChild(body);
+  return wrap;
+}
+
+function warningText(w) {
+  if (!w || !w.code) return String(w);
+  if (w.code === "passage-short") return `The passage is shorter than the real exam uses (${w.detail}).`;
+  if (w.code === "passage-long") return `The passage is longer than the real exam uses (${w.detail}).`;
+  if (w.code === "weak-gate") return `Checked by a model from the same provider that wrote it, so the check is weaker than usual. ${w.detail || ""}`;
+  if (w.code === "solver-unavailable") return "The checking model could not be reached, so this set has not been verified at all. Read it carefully.";
+  return `${w.code}: ${w.detail || ""}`;
+}
+
+function renderBankItems(entry, disputed) {
+  const host = document.createElement("div");
+  const items = entry.items;
+
+  // Matching sets are one object; multiple-choice sets are an array. Both carry the key.
+  if (items && !Array.isArray(items) && Array.isArray(items.options)) {
+    const box = document.createElement("div");
+    box.className = "bank-item";
+    const opts = items.options.map((o, i) => `<div class="bank-opt">(${i}) ${escapeHtml(o)}</div>`).join("");
+    const used = new Set(items.answer || []);
+    const spare = items.options.map((_, i) => i).filter((i) => !used.has(i));
+    box.innerHTML = `<div class="bi-q">Options</div>${opts}` +
+      (spare.length ? `<div class="bank-flag">Spare option (matches nothing): ${spare.map((i) => "(" + i + ")").join(", ")}</div>` : "");
+    host.appendChild(box);
+
+    (items.targets || []).forEach((t, i) => {
+      const answer = (items.answer || [])[i];
+      const div = document.createElement("div");
+      div.className = "bank-item";
+      div.innerHTML =
+        `<div class="bi-q">${i + 1}. ${escapeHtml(String(t).slice(0, 400))}</div>` +
+        `<div class="bank-opt correct">(${answer}) ${escapeHtml(String((items.options || [])[answer] ?? ""))}</div>`;
+      host.appendChild(div);
+    });
+    return host;
+  }
+
+  if (!Array.isArray(items)) {
+    const div = document.createElement("div");
+    div.className = "bank-empty";
+    div.textContent = "This entry's questions could not be read.";
+    host.appendChild(div);
+    return host;
+  }
+
+  items.forEach((it, i) => {
+    const div = document.createElement("div");
+    div.className = "bank-item" + (disputed.has(i) ? " disputed" : "");
+    const opts = (it.options || [])
+      .map((o, j) => `<div class="bank-opt${j === it.answer ? " correct" : ""}">(${j}) ${escapeHtml(o)}</div>`)
+      .join("");
+    div.innerHTML = `<div class="bi-q">${i + 1}. ${escapeHtml(it.q || "")}</div>${opts}`;
+    host.appendChild(div);
+  });
+  return host;
+}
+
+async function reviewBankEntry(id, action, clean) {
+  if (action === "approve") {
+    const warn = clean
+      ? "Approve this set? Students will start seeing it."
+      : "The checking model disagreed with at least one answer here. Approve anyway? Students will start seeing it.";
+    if (!confirm(warn)) return;
+  } else if (!confirm("Remove this set? It will stop being served to students.")) {
+    return;
+  }
+  const reason = action === "retire" ? (prompt("Why? (optional, for your own records)") || "") : undefined;
+  const data = await adminPost("/admin/bank/review", { id, action, reason });
+  if (!data) return;
+  await loadBankQueue();
+  loadBankGroups();
+}
+
+for (const tab of document.querySelectorAll(".bank-tab")) {
+  tab.addEventListener("click", () => { bankStatus = tab.dataset.status; syncBankTabs(); loadBankQueue(); });
+}
+bankQs("bankExam").addEventListener("change", loadBankGroups);
+bankQs("bankSkill").addEventListener("change", loadBankGroups);
+
+// Load the bank once the dashboard is actually on screen. Deliberately at the end of
+// the script: the state above is declared with let, so calling these from the unlock
+// block further up would hit the temporal dead zone.
+if (adminKey) { loadBankGroups(); loadBankQueue(); }
+
 </script>
 </body>
 </html>
