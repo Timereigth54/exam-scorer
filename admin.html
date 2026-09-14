@@ -662,8 +662,12 @@ async function generateBankEntry(taskFrom, btn) {
 
     if (res.status === 422) {
       // An expected outcome, not a crash: the generator produces an unusable set often
-      // enough that this needs to read as "try again", not as a fault.
-      alert((data.message || "The generated set could not be used.") + " Nothing was saved — press Generate again.");
+      // enough that this needs to read as "try again", not as a fault. The server's
+      // message already says nothing was saved - do not append a second copy of it.
+      const detail = (data.problems || []).slice(0, 4)
+        .map((p) => (p.index === null || p.index === undefined ? "" : "Question " + (p.index + 1) + ": ") + (p.detail || p.code))
+        .join("\n");
+      alert((data.message || "The generated set could not be used.") + (detail ? "\n\n" + detail : "") + "\n\nPress Generate to try again.");
     } else if (!res.ok) {
       alert(data.error || `That didn't work (server returned ${res.status}).`);
     } else {
