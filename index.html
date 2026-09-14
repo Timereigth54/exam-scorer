@@ -2573,7 +2573,12 @@ async function loadProgress() {
     const data = await res.json();
     renderProgress(data.submissions || []);
   } catch (e) {
-    document.getElementById("progressContent").innerHTML = `<p>Couldn't reach the server: ${e.message}</p>`;
+    // textContent, not innerHTML: an error string is not ours to trust as markup.
+    const p = document.createElement("p");
+    p.textContent = `Couldn't reach the server: ${e.message}`;
+    const host = document.getElementById("progressContent");
+    host.innerHTML = "";
+    host.appendChild(p);
   }
 }
 

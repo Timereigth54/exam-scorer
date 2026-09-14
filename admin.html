@@ -116,7 +116,7 @@
 
     <div class="card">
       <table id="rosterTable">
-        <thead><tr><th>Name</th><th>Code</th><th>Cohort</th><th>Quota</th><th>Speaking answers</th><th>Audio (sec)</th><th>Speaking access</th><th>Last activity</th></tr></thead>
+        <thead><tr><th>Name</th><th>Code</th><th>Cohort</th><th>Writing quota</th><th>Speaking answers</th><th>Audio (sec)</th><th>Speaking access</th><th>Last activity</th></tr></thead>
         <tbody id="rosterBody"></tbody>
       </table>
     </div>
@@ -243,7 +243,11 @@ async function loadRoster() {
       const tr = document.createElement("tr");
       tr.className = "student-row";
       const limit = s.task_limit ?? 20;
-      const overQuota = s.submission_count >= limit;
+      // task_limit is the writing allowance only — speaking is metered by the attempt
+      // quota in the next column. Showing total submissions here made a student who had
+      // only been speaking look like they were out of writing attempts.
+      const writingCount = s.writing_count ?? s.submission_count ?? 0;
+      const overQuota = writingCount >= limit;
       const audioUsed = s.speaking_seconds_used ?? 0;
       const overAudio = audioUsed >= secondsLimit;
       // Graded answers are what's actually sold now; seconds are the abuse guard behind
@@ -259,7 +263,7 @@ async function loadRoster() {
         : "";
 
       tr.innerHTML = `<td>${escapeHtml(s.name)}</td><td><span class="code">${escapeHtml(s.code)}</span></td><td>${escapeHtml(s.cohort || "—")}</td>
-        <td${overQuota ? ' style="color:#C84B31;font-weight:600"' : ""}>${escapeHtml(String(s.submission_count))}/${escapeHtml(String(limit))}
+        <td${overQuota ? ' style="color:#C84B31;font-weight:600"' : ""} title="${escapeHtml(String(s.submission_count))} submissions in total, including speaking">${escapeHtml(String(writingCount))}/${escapeHtml(String(limit))}
           <button type="button" class="row-btn add-attempts-btn">+5</button>
           <button type="button" class="row-btn set-limit-btn" data-limit="${escapeHtml(String(limit))}">set…</button>
         </td>
