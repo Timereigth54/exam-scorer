@@ -360,6 +360,28 @@
   #legalContent p,#legalContent li{font-size:.85rem;line-height:1.65;color:var(--ink);}
   #legalContent ul{margin:.3rem 0 .3rem 1.1rem;}
   #legalContent .legal-meta{font-size:.75rem;color:var(--muted);margin-bottom:.8rem;}
+  .reading-pick{display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;}
+  .reading-pick button{white-space:nowrap;}
+  .reading-split{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-top:1rem;}
+  @media (max-width:760px){ .reading-split{grid-template-columns:1fr;} }
+  .reading-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:.4rem;}
+  .reading-passage{white-space:pre-wrap;line-height:1.75;font-size:.95rem;background:#fff;border:1px solid var(--paper-line);border-radius:10px;padding:1rem 1.1rem;max-height:60vh;overflow:auto;}
+  .reading-q{border:1px solid var(--paper-line);border-radius:10px;padding:.7rem .85rem;margin-bottom:.6rem;background:#fff;}
+  .reading-q .rq-stem{font-weight:600;font-size:.92rem;margin-bottom:.45rem;line-height:1.5;}
+  .reading-opt{display:flex;gap:.5rem;align-items:flex-start;padding:.25rem 0;font-size:.9rem;line-height:1.5;cursor:pointer;}
+  .reading-opt input{margin-top:.25rem;flex-shrink:0;}
+  .reading-q select{width:100%;padding:.5rem .6rem;border:1px solid var(--paper-line);border-radius:8px;font-family:inherit;font-size:.9rem;background:#fff;color:var(--ink);}
+  .reading-actions{display:flex;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap;}
+  .reading-progress{font-size:.85rem;color:var(--ink-soft);}
+  .reading-score{font-family:'Lora',serif;font-size:2rem;font-weight:700;color:var(--stamp-teal);}
+  .reading-score-sub{color:var(--ink-soft);font-size:.9rem;margin-bottom:.25rem;}
+  .reading-q.right{border-color:var(--stamp-teal);background:#F4FAF8;}
+  .reading-q.wrong{border-color:#C84B31;background:#FEF7F5;}
+  .reading-verdict{font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:.35rem;}
+  .reading-q.right .reading-verdict{color:var(--stamp-teal);}
+  .reading-q.wrong .reading-verdict{color:#C84B31;}
+  .reading-opt.is-key{color:var(--stamp-teal);font-weight:600;}
+  .reading-opt.is-chosen-wrong{color:#C84B31;text-decoration:line-through;}
 </style>
 </head>
 <body>
@@ -389,9 +411,10 @@
         <div class="pillgroup">
           <button type="button" class="pill active" data-skill="writing">Writing</button>
           <button type="button" class="pill" data-skill="speaking">Speaking</button>
+          <button type="button" class="pill" data-skill="reading">Reading</button>
         </div>
       </div>
-      <div>
+      <div id="taskSelectWrap">
         <label for="taskSelect">Task</label>
         <select id="taskSelect"></select>
       </div>
@@ -445,7 +468,7 @@
 
       <div class="paywall" id="speakingPaywall" style="display:none">
         <h3>Разговорная практика — платный раздел</h3>
-        <p class="paywall-lead">Письменная часть остаётся бесплатной и без ограничений. В разговорной вы записываете устный ответ, получаете расшифровку и разбор по критериям вашего экзамена.</p>
+        <p class="paywall-lead">Письменная часть и задания по чтению остаются бесплатными и без ограничений. В разговорной вы записываете устный ответ, получаете расшифровку и разбор по критериям вашего экзамена.</p>
         <p id="paywallReason" class="paywall-reason"></p>
 
         <div class="plan-grid" id="planGrid"></div>
@@ -508,6 +531,37 @@
         </div>
       </div>
     </div>
+    <!-- Reading: bank-served sections. Free, objectively marked, no model call. -->
+    <div id="readingPane" style="display:none">
+      <div class="reading-pick">
+        <div style="flex:1;min-width:200px">
+          <label for="readingTaskSelect">Section task</label>
+          <select id="readingTaskSelect"></select>
+        </div>
+        <button type="button" class="secondary" id="readingStartBtn">Start this task</button>
+      </div>
+      <div class="access-note" id="readingNote" style="margin-top:.75rem"></div>
+
+      <div id="readingWork" style="display:none">
+        <div class="reading-split">
+          <div>
+            <div class="reading-label" id="readingPassageLabel">Text</div>
+            <div class="reading-passage" id="readingPassage"></div>
+          </div>
+          <div>
+            <div class="reading-label" id="readingQuestionsLabel">Questions</div>
+            <div id="readingQuestions"></div>
+          </div>
+        </div>
+        <div class="reading-actions">
+          <button class="primary" id="readingSubmitBtn">Check my answers</button>
+          <span class="reading-progress" id="readingProgress"></span>
+        </div>
+      </div>
+
+      <div id="readingResult" style="display:none"></div>
+    </div>
+
   </section>
 
 
@@ -566,9 +620,10 @@
     <p>
       Сервис проверяет письменные и устные ответы к языковым экзаменам (IELTS, TOEFL iBT,
       Duolingo English Test, Cambridge, ОГЭ и ЕГЭ) и выдаёт разбор по официальным критериям
-      экзамена. <strong>Онлайн оплачивается только доступ к разговорной практике</strong> —
-      пакет из фиксированного числа заданий на один месяц. Проверка письменных работ
-      бесплатна и оплаты не требует.
+      экзамена. Для ОГЭ и ЕГЭ дополнительно доступен раздел «Чтение»: тексты и задания
+      проверяются по ключу, без участия модели. <strong>Онлайн оплачивается только доступ
+      к разговорной практике</strong> — пакет из фиксированного числа заданий на один месяц.
+      Проверка письменных работ и заданий по чтению бесплатна и оплаты не требует.
     </p>
 
     <div class="price-table-wrap">
@@ -703,13 +758,13 @@ const LEGAL_DOCS = {
       <p>Настоящий документ является публичной офертой ${MERCHANT.legalName} (ИНН ${MERCHANT.inn}, ОГРНИП ${MERCHANT.ogrnip}), далее — «Исполнитель», и содержит условия оказания услуг сервиса подготовки к языковым экзаменам, далее — «Сервис».</p>
 
       <h3>1. Предмет</h3>
-      <p>Исполнитель предоставляет доступ к Сервису для самостоятельной подготовки к экзаменам по английскому языку. Письменная часть предоставляется бесплатно. Разговорная часть предоставляется на платной основе пакетами проверенных устных ответов.</p>
+      <p>Исполнитель предоставляет доступ к Сервису для самостоятельной подготовки к экзаменам по английскому языку. Письменная часть и задания по чтению (ОГЭ, ЕГЭ) предоставляются бесплатно и без ограничения по количеству попыток. Разговорная часть предоставляется на платной основе пакетами проверенных устных ответов.</p>
 
       <h3>2. Что входит в оплаченный пакет</h3>
       <p>Пакет включает фиксированное количество проверенных устных ответов («ответов») и срок, в течение которого их можно использовать. Количество и стоимость указаны на странице оплаты в рублях. Один ответ расходуется в момент, когда запись успешно расшифрована и передана на проверку. Если запись не содержит распознаваемой речи, ответ не расходуется.</p>
 
       <h3>3. Характер оценки</h3>
-      <p>Оценка формируется автоматически на основании критериев соответствующего экзамена и носит учебный характер. Она <strong>не является</strong> официальным результатом экзамена и не может использоваться как таковой. Официальную оценку выставляет только экзаменационный центр.</p>
+      <p>Оценка формируется автоматически на основании критериев соответствующего экзамена и носит учебный характер. Она <strong>не является</strong> официальным результатом экзамена и не может использоваться как таковой. Официальную оценку выставляет только экзаменационный центр.</p><p>В заданиях по чтению ответы сверяются с ключом, без участия языковой модели; показывается количество верных ответов. Перевод первичных баллов в тестовые (ЕГЭ) и в отметку (ОГЭ) публикуется Рособрнадзором отдельно и ежегодно меняется, поэтому Сервис такой перевод не выполняет и итоговый балл экзамена не прогнозирует.</p>
 
       <h3>4. Оплата</h3>
       <p>Оплата производится банковской картой через платёжный сервис ЮKassa. Исполнитель не получает и не хранит данные карты. Доступ открывается автоматически после подтверждения платежа платёжным сервисом.</p>
@@ -928,7 +983,7 @@ function applyPromptVisibility(t) {
   }
 }
 
-examSelect.addEventListener("change", loadTasks);
+examSelect.addEventListener("change", () => (currentSkill === "reading" ? loadReadingTasks() : loadTasks()));
 taskSelect.addEventListener("change", showTaskMeta);
 
 document.querySelectorAll(".pill").forEach(p => {
@@ -938,7 +993,10 @@ document.querySelectorAll(".pill").forEach(p => {
     p.classList.add("active");
     currentSkill = p.dataset.skill;
     onSkillChange();
-    loadTasks();
+    // Reading is served from the approved bank, not from the task templates, and
+    // /tasks does not know the skill - asking it would just 400.
+    if (currentSkill === "reading") loadReadingTasks();
+    else loadTasks();
   });
 });
 
@@ -946,9 +1004,23 @@ document.querySelectorAll(".pill").forEach(p => {
 // The writing flow is left completely untouched — it's simply hidden.
 function onSkillChange() {
   const speaking = currentSkill === "speaking";
-  document.getElementById("writingPane").style.display = speaking ? "none" : "";
+  const reading = currentSkill === "reading";
+  document.getElementById("writingPane").style.display = (speaking || reading) ? "none" : "";
   document.getElementById("speakingPane").style.display = speaking ? "" : "none";
+  document.getElementById("readingPane").style.display = reading ? "" : "none";
   document.getElementById("results").classList.remove("visible");
+
+  // The prompt box, the generator, the photo uploader and the task dropdown all belong
+  // to the writing and speaking flows. Reading brings its own text and its own picker.
+  for (const id of ["generateBtn", "promptWrap", "promptHiddenNote", "imageUploadWrap", "taskSelectWrap", "taskMeta"]) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = reading ? "none" : "";
+  }
+  if (reading) {
+    cancelSpeech();
+    stopRecordingHardware();
+    return;
+  }
   if (speaking) {
     stopRecordingHardware();
     resetSpeakingFlow();
@@ -2640,6 +2712,278 @@ function renderProgress(submissions) {
 }
 
 loadExams();
+
+// --- Reading sections -------------------------------------------------------
+//
+// Served from the teacher-approved bank, marked against a stored key. No model call
+// happens anywhere in this flow, which is why it is free and why nothing here touches
+// a quota.
+let readingState = null;   // { bankId, format, answers: [], items }
+
+function readingQs(id) { return document.getElementById(id); }
+
+async function loadReadingTasks() {
+  const select = readingQs("readingTaskSelect");
+  const note = readingQs("readingNote");
+  select.innerHTML = "";
+  note.textContent = "Загружаем задания…";
+  readingQs("readingWork").style.display = "none";
+  readingQs("readingResult").style.display = "none";
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/section/available?exam=${encodeURIComponent(examSelect.value)}&skill=reading`);
+    const data = await res.json();
+    if (!res.ok) { note.textContent = data.error || "Не удалось загрузить список заданий."; return; }
+
+    const usable = data.groups.filter(g => g.available);
+    for (const g of data.groups) {
+      const opt = document.createElement("option");
+      const label = g.taskFrom === g.taskTo ? `Задание ${g.taskFrom}` : `Задания ${g.taskFrom}–${g.taskTo}`;
+      opt.value = g.taskFrom;
+      opt.textContent = g.available
+        ? `${label} — ${g.itemCount} ${g.itemCount === 1 ? "вопрос" : "вопросов"}`
+        : `${label} — пока недоступно`;
+      opt.disabled = !g.available;
+      select.appendChild(opt);
+    }
+    const first = data.groups.find(g => g.available);
+    if (first) select.value = String(first.taskFrom);
+
+    readingQs("readingStartBtn").disabled = !usable.length;
+    note.textContent = usable.length
+      ? `${data.section.label}: ${data.section.maxPrimary} первичных баллов за весь раздел. Структура по спецификации ФИПИ ${data.section.specYear} года. Проверка бесплатная и не расходует лимит письменных работ.`
+      : "Для этого экзамена пока нет проверенных текстов. Преподаватель добавит их в ближайшее время.";
+  } catch (e) {
+    note.textContent = "Не удалось связаться с сервером: " + e.message;
+  }
+}
+
+async function startReading() {
+  const code = readingQs("studentCode").value.trim();
+  if (!code) { alert("Сначала введите свой код."); return; }
+
+  const btn = readingQs("readingStartBtn");
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = "Загружаем…";
+  readingQs("readingResult").style.display = "none";
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/section/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentCode: code,
+        examKey: examSelect.value,
+        skill: "reading",
+        taskFrom: Number(readingQs("readingTaskSelect").value),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || "Не удалось загрузить задание."); return; }
+
+    readingState = { bankId: data.bankId, format: data.format, items: data.items, answers: [] };
+    readingQs("readingPassage").textContent = data.passage;
+    readingQs("readingPassageLabel").textContent = data.format === "matching" ? "Тексты" : "Текст";
+    readingQs("readingQuestionsLabel").textContent = data.format === "matching" ? "Подберите заголовки" : "Вопросы";
+    renderReadingQuestions(data);
+    readingQs("readingWork").style.display = "";
+    readingQs("readingWork").scrollIntoView({ behavior: "smooth", block: "start" });
+    updateReadingProgress();
+  } catch (e) {
+    alert("Не удалось связаться с сервером: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+function renderReadingQuestions(data) {
+  const host = readingQs("readingQuestions");
+  host.innerHTML = "";
+
+  if (data.format === "matching") {
+    // One dropdown per text. Every option stays selectable: stopping a student reusing
+    // an option would quietly mark the paper for them, and the real exam does not.
+    data.items.targets.forEach((target, i) => {
+      const box = document.createElement("div");
+      box.className = "reading-q";
+      box.id = "rq-" + i;
+      const stem = document.createElement("div");
+      stem.className = "rq-stem";
+      stem.textContent = `${i + 1}. ${target}`;
+      const sel = document.createElement("select");
+      const blank = document.createElement("option");
+      blank.value = "";
+      blank.textContent = "— выберите заголовок —";
+      sel.appendChild(blank);
+      data.items.options.forEach((o, j) => {
+        const opt = document.createElement("option");
+        opt.value = String(j);
+        opt.textContent = `${j + 1}. ${o}`;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener("change", () => {
+        readingState.answers[i] = sel.value === "" ? null : Number(sel.value);
+        updateReadingProgress();
+      });
+      box.appendChild(stem);
+      box.appendChild(sel);
+      host.appendChild(box);
+    });
+    return;
+  }
+
+  data.items.forEach((item, i) => {
+    const box = document.createElement("div");
+    box.className = "reading-q";
+    box.id = "rq-" + i;
+    const stem = document.createElement("div");
+    stem.className = "rq-stem";
+    stem.textContent = `${i + 1}. ${item.q}`;
+    box.appendChild(stem);
+
+    item.options.forEach((o, j) => {
+      const label = document.createElement("label");
+      label.className = "reading-opt";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "rq" + i;
+      radio.value = String(j);
+      radio.addEventListener("change", () => {
+        readingState.answers[i] = j;
+        updateReadingProgress();
+      });
+      const text = document.createElement("span");
+      text.textContent = o;
+      label.appendChild(radio);
+      label.appendChild(text);
+      box.appendChild(label);
+    });
+    host.appendChild(box);
+  });
+}
+
+function readingAnswerCount() {
+  if (!readingState) return 0;
+  const total = readingState.format === "matching" ? readingState.items.targets.length : readingState.items.length;
+  let answered = 0;
+  for (let i = 0; i < total; i++) if (Number.isInteger(readingState.answers[i])) answered++;
+  return { answered, total };
+}
+
+function updateReadingProgress() {
+  const { answered, total } = readingAnswerCount();
+  readingQs("readingProgress").textContent = `Отвечено ${answered} из ${total}`;
+}
+
+async function submitReading() {
+  if (!readingState) return;
+  const code = readingQs("studentCode").value.trim();
+  const { answered, total } = readingAnswerCount();
+  if (answered < total && !confirm(`Вы ответили на ${answered} из ${total}. Неотвеченные вопросы будут засчитаны как неверные. Проверить?`)) return;
+
+  const btn = readingQs("readingSubmitBtn");
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = "Проверяем…";
+  try {
+    const answers = [];
+    for (let i = 0; i < total; i++) answers.push(Number.isInteger(readingState.answers[i]) ? readingState.answers[i] : null);
+    const res = await fetch(`${BACKEND_URL}/section/submit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentCode: code, bankId: readingState.bankId, answers }),
+    });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || "Не удалось проверить ответы."); return; }
+    renderReadingResult(data);
+  } catch (e) {
+    alert("Не удалось связаться с сервером: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+function renderReadingResult(data) {
+  // Mark up the questions in place so a student reads their mistake next to the
+  // question that caused it, rather than against a list of numbers further down.
+  data.perItem.forEach((item, i) => {
+    const box = document.getElementById("rq-" + i);
+    if (!box) return;
+    box.classList.remove("right", "wrong");
+    box.classList.add(item.correct ? "right" : "wrong");
+
+    const verdict = document.createElement("div");
+    verdict.className = "reading-verdict";
+    verdict.textContent = item.correct ? "Верно" : (item.chosen === null ? "Без ответа" : "Неверно");
+    box.insertBefore(verdict, box.firstChild);
+
+    if (data.format === "matching" || (data.items && !Array.isArray(data.items))) {
+      const sel = box.querySelector("select");
+      if (sel) sel.disabled = true;
+      if (!item.correct) {
+        const right = document.createElement("div");
+        right.className = "reading-opt is-key";
+        right.textContent = `Правильный ответ: ${item.expected + 1}. ${data.items.options[item.expected]}`;
+        box.appendChild(right);
+      }
+      return;
+    }
+
+    box.querySelectorAll(".reading-opt").forEach((label, j) => {
+      const input = label.querySelector("input");
+      if (input) input.disabled = true;
+      if (j === item.expected) label.classList.add("is-key");
+      else if (j === item.chosen) label.classList.add("is-chosen-wrong");
+    });
+  });
+
+  const host = readingQs("readingResult");
+  host.innerHTML = "";
+  host.style.display = "";
+
+  const score = document.createElement("div");
+  score.className = "reading-score";
+  score.textContent = `${data.correct} / ${data.total}`;
+  const sub = document.createElement("div");
+  sub.className = "reading-score-sub";
+  sub.textContent = `${data.percent}% правильных ответов`;
+  host.appendChild(score);
+  host.appendChild(sub);
+
+  // Points only where the conversion is published; never a number we made up.
+  const points = document.createElement("p");
+  points.className = "access-note";
+  points.style.marginTop = ".5rem";
+  if (data.points) {
+    points.textContent = `Первичных баллов за это задание: ${data.points.earned} из ${data.points.max}.`;
+  } else {
+    points.textContent = data.pointsUnavailableReason
+      || "Для этого задания официальная шкала перевода в баллы не опубликована, поэтому показано только количество верных ответов.";
+  }
+  host.appendChild(points);
+
+  const band = document.createElement("p");
+  band.className = "access-note";
+  band.textContent = "Это тренировка одного раздела, а не весь экзамен, поэтому итоговый балл здесь не выставляется. "
+    + (data.bandUnavailableReason || "");
+  host.appendChild(band);
+
+  const again = document.createElement("button");
+  again.className = "secondary";
+  again.style.marginTop = ".75rem";
+  again.textContent = "Другой текст";
+  again.addEventListener("click", () => { readingQs("readingResult").style.display = "none"; startReading(); });
+  host.appendChild(again);
+
+  host.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+readingQs("readingStartBtn").addEventListener("click", startReading);
+readingQs("readingSubmitBtn").addEventListener("click", submitReading);
+
 </script>
 </body>
 </html>
