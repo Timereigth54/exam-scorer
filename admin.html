@@ -107,6 +107,9 @@
   .bank-actions button{font-size:.82rem;}
   .bank-empty{color:var(--ink-faint);font-size:.85rem;padding:.6rem 0;}
   .bank-busy{color:var(--stamp-teal);font-size:.82rem;padding:.4rem 0;}
+  .bank-why{margin-top:.4rem;padding:.4rem .55rem;border-radius:6px;background:var(--paper);border-left:3px solid var(--stamp-teal);font-size:.8rem;line-height:1.5;}
+  .bank-why b{display:block;font-size:.65rem;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);margin-bottom:.15rem;}
+  .bank-why.missing{border-left-color:#C84B31;color:#C84B31;font-style:italic;}
 </style>
 </head>
 <body>
@@ -789,6 +792,21 @@ function warningText(w) {
   return `${w.code}: ${w.detail || ""}`;
 }
 
+// One explanation block. A missing explanation is called out rather than left blank —
+// entries generated before explanations existed are still approvable, but the teacher
+// should know the student will get no reasoning with their result.
+function bankWhy(heading, text) {
+  const box = document.createElement("div");
+  box.className = text ? "bank-why" : "bank-why missing";
+  const h = document.createElement("b");
+  h.textContent = heading;
+  const p = document.createElement("span");
+  p.textContent = text || "none — students will see the right answer with no reasoning";
+  box.appendChild(h);
+  box.appendChild(p);
+  return box;
+}
+
 function renderBankItems(entry, disputed) {
   const host = document.createElement("div");
   const items = entry.items;
@@ -811,6 +829,8 @@ function renderBankItems(entry, disputed) {
       div.innerHTML =
         `<div class="bi-q">${i + 1}. ${escapeHtml(String(t).slice(0, 400))}</div>` +
         `<div class="bank-opt correct">(${answer}) ${escapeHtml(String((items.options || [])[answer] ?? ""))}</div>`;
+      const why = Array.isArray(items.why) ? items.why[i] : null;
+      div.appendChild(bankWhy("Why", why));
       host.appendChild(div);
     });
     return host;
@@ -831,6 +851,19 @@ function renderBankItems(entry, disputed) {
       .map((o, j) => `<div class="bank-opt${j === it.answer ? " correct" : ""}">(${j}) ${escapeHtml(o)}</div>`)
       .join("");
     div.innerHTML = `<div class="bi-q">${i + 1}. ${escapeHtml(it.q || "")}</div>${opts}`;
+
+    // The explanation is what a student will actually read, so it is reviewed here or
+    // it is not reviewed at all. Wrong reasoning behind a right answer still teaches
+    // the wrong thing.
+    div.appendChild(bankWhy("Why the answer is right", it.why));
+    if (Array.isArray(it.whyNot)) {
+      it.whyNot.forEach((w, j) => {
+        if (j === it.answer || !w) return;
+        div.appendChild(bankWhy(`Why (${j}) is wrong`, w));
+      });
+    } else {
+      div.appendChild(bankWhy("Per-option explanations", null));
+    }
     host.appendChild(div);
   });
   return host;

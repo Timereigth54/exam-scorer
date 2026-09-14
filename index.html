@@ -382,6 +382,10 @@
   .reading-q.wrong .reading-verdict{color:#C84B31;}
   .reading-opt.is-key{color:var(--stamp-teal);font-weight:600;}
   .reading-opt.is-chosen-wrong{color:#C84B31;text-decoration:line-through;}
+  .pill-disabled{opacity:.45;cursor:not-allowed;}
+  .reading-why{margin-top:.5rem;padding:.5rem .65rem;border-radius:8px;background:var(--paper);border-left:3px solid var(--stamp-teal);font-size:.85rem;line-height:1.55;}
+  .reading-why b{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);margin-bottom:.2rem;}
+  .reading-q.wrong .reading-why:first-of-type{border-left-color:#C84B31;}
 </style>
 </head>
 <body>
@@ -389,7 +393,7 @@
 
   <header class="top">
     <h1>Exam Prep</h1>
-    <p>Writing &amp; speaking practice, graded against real exam criteria</p>
+    <p>Writing, speaking &amp; reading practice, graded against real exam criteria</p>
     <p class="top-pricing-link"><a href="#pricing">Тарифы и цены · Оплата</a></p>
   </header>
 
@@ -888,8 +892,34 @@ async function loadExams() {
     const res = await fetch(`${BACKEND_URL}/exams`);
     const data = await res.json();
     if (data.exams) populateExamSelect(data.exams);
+    if (Array.isArray(data.sectionExams)) sectionExams = data.sectionExams;
   } catch (e) { /* fallback labels already shown */ }
+  syncReadingPill();
   await loadTasks();
+}
+
+// Only ОГЭ and ЕГЭ have an objectively-marked reading section today. Offering the tab
+// for the others would hand a student the raw validation error from the Worker, in
+// English, in a Russian interface - which is exactly what it did before this existed.
+let sectionExams = ["ege", "oge"];
+
+function syncReadingPill() {
+  const pill = document.querySelector('[data-skill="reading"]');
+  if (!pill) return;
+  const supported = sectionExams.includes(examSelect.value);
+  pill.disabled = !supported;
+  pill.classList.toggle("pill-disabled", !supported);
+  pill.title = supported ? "" : "Для этого экзамена раздел «Чтение» пока не готов.";
+  // Switching to an exam without reading while reading is open must not strand the
+  // student on an empty pane.
+  if (!supported && currentSkill === "reading") {
+    const writing = document.querySelector('[data-skill="writing"]');
+    document.querySelectorAll(".pill").forEach(x => x.classList.remove("active"));
+    writing.classList.add("active");
+    currentSkill = "writing";
+    onSkillChange();
+    loadTasks();
+  }
 }
 
 async function loadTasks() {
@@ -983,7 +1013,7 @@ function applyPromptVisibility(t) {
   }
 }
 
-examSelect.addEventListener("change", () => (currentSkill === "reading" ? loadReadingTasks() : loadTasks()));
+examSelect.addEventListener("change", () => { syncReadingPill(); return currentSkill === "reading" ? loadReadingTasks() : loadTasks(); });
 taskSelect.addEventListener("change", showTaskMeta);
 
 document.querySelectorAll(".pill").forEach(p => {
@@ -1819,6 +1849,12 @@ async function renderPricing() {
     <tr>
       <td>Проверка письменных работ<div class="price-sub">Writing — все экзамены</div></td>
       <td>Проверка эссе, писем и сочинений с оценкой по критериям экзамена, разбором ошибок и образцом ответа. Без ограничения по количеству.</td>
+      <td class="price-value price-free">0 ₽</td>
+      <td>Не требуется</td>
+    </tr>
+    <tr>
+      <td>Задания по чтению<div class="price-sub">Чтение — ОГЭ и ЕГЭ</div></td>
+      <td>Тексты и вопросы по структуре ФИПИ. Ответы сверяются с ключом, к каждому вопросу даётся объяснение, почему верен правильный ответ и почему не подходит выбранный. Без ограничения по количеству.</td>
       <td class="price-value price-free">0 ₽</td>
       <td>Не требуется</td>
     </tr>`;
@@ -2906,6 +2942,18 @@ async function submitReading() {
   }
 }
 
+function readingWhy(heading, text) {
+  const box = document.createElement("div");
+  box.className = "reading-why";
+  const h = document.createElement("b");
+  h.textContent = heading;
+  const p = document.createElement("span");
+  p.textContent = text;
+  box.appendChild(h);
+  box.appendChild(p);
+  return box;
+}
+
 function renderReadingResult(data) {
   // Mark up the questions in place so a student reads their mistake next to the
   // question that caused it, rather than against a list of numbers further down.
@@ -2929,6 +2977,8 @@ function renderReadingResult(data) {
         right.textContent = `Правильный ответ: ${item.expected + 1}. ${data.items.options[item.expected]}`;
         box.appendChild(right);
       }
+      const whyList = data.items && Array.isArray(data.items.why) ? data.items.why : null;
+      if (whyList && whyList[i]) box.appendChild(readingWhy("Почему", whyList[i]));
       return;
     }
 
@@ -2938,6 +2988,16 @@ function renderReadingResult(data) {
       if (j === item.expected) label.classList.add("is-key");
       else if (j === item.chosen) label.classList.add("is-chosen-wrong");
     });
+
+    // The explanation is the reason this screen exists. Show why their own choice
+    // failed FIRST — that is the question they are actually asking — then why the right
+    // answer is right. Older bank entries have no explanations; say nothing rather than
+    // showing an empty heading.
+    const source = (data.items && data.items[i]) || {};
+    if (!item.correct && item.chosen !== null && Array.isArray(source.whyNot) && source.whyNot[item.chosen]) {
+      box.appendChild(readingWhy("Почему ваш ответ не подходит", source.whyNot[item.chosen]));
+    }
+    if (source.why) box.appendChild(readingWhy("Почему верен правильный ответ", source.why));
   });
 
   const host = readingQs("readingResult");
