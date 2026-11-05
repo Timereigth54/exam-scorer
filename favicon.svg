@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Exam Prep: a squared exercise book in ballpoint blue (DESIGN.md). Spine on the left,
+       two staples, a white name label with one line of writing. Drawn by hand, no raster. -->
+  <path d="M6 2h18a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" fill="#1F36A8"/>
+  <rect x="5" y="2" width="4" height="28" fill="#17297F"/>
+  <rect x="6.2" y="7" width="1.6" height="5" rx=".5" fill="#FFFFFF" opacity=".75"/>
+  <rect x="6.2" y="20" width="1.6" height="5" rx=".5" fill="#FFFFFF" opacity=".75"/>
+  <rect x="12" y="18" width="13" height="8" rx="1" fill="#F8FBFF"/>
+  <path d="M14 22.6c1.6-1.4 2.8.8 4.3-.4s2.6.6 4.6-.6" fill="none" stroke="#1F36A8" stroke-width="1.3" stroke-linecap="round"/>
+</svg>

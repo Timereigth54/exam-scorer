@@ -4,25 +4,51 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Exam Prep — Roster</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&display=swap" rel="stylesheet">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts/fonts.css">
+<!-- Shown only as the top page or inside a page of this same site (the owner's page). A page on
+     another site that frames this one gets a blank frame, so it cannot dress the roster up as its
+     own. Hidden first, then revealed, so it fails closed if the script does not run. -->
+<style id="frameGuard">html{display:none}</style>
+<script>
+(function () {
+  let same = window.top === window;
+  try { same = same || window.top.location.origin === location.origin; } catch (e) { same = false; }
+  if (!same) return;
+  if (window.top !== window) document.documentElement.classList.add("in-hub");
+  document.getElementById("frameGuard").remove();
+})();
+</script>
 <style>
   :root{
-    --paper:#FAF7F1;--paper-line:#E7E0D3;--ink:#22283B;--ink-soft:#5B6178;--ink-faint:#8A8F9F;
-    --stamp-teal:#1F6F6B;--stamp-teal-bg:#E7F1EF;--seal-gold:#B9852E;--card:#fff;--radius:14px;
-    --shadow:0 2px 10px rgba(34,40,59,0.06);
+    /* DESIGN.md exercise-book tokens. Old names are kept so the rules below read the same:
+       --paper is the desk around the sheet, --stamp-teal is now ballpoint ink. */
+    --paper:#E9EFF7;--paper-line:#D3E3F5;--ink:#1B2233;--ink-soft:#55607A;--ink-faint:#55607A;
+    --stamp-teal:#1F36A8;--stamp-teal-bg:#E8ECF8;--seal-gold:#8A4B00;--card:#F8FBFF;--radius:4px;
+    --warn:#A3361F;--warn-bg:var(--warn-bg);
+    --shadow:0 1px 3px rgba(27,34,51,.12);
+    --hand:Caveat,'Segoe Print','Comic Sans MS',cursive;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:2rem 1rem 4rem;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Golos Text','Segoe UI',Roboto,Helvetica,Arial,sans-serif;padding:2rem 1rem 4rem;}
+  .in-hub body{padding-top:1rem;}
+  .in-hub .hub-hide{display:none;}
+  :focus-visible{outline:3px solid #1F36A8;outline-offset:3px;}
   .shell{max-width:880px;margin:0 auto;}
-  h1{font-family:'Lora',serif;font-size:1.7rem;margin:0 0 .25rem;}
+  h1{font:700 clamp(2.1rem,7vw,3.2rem)/1.05 var(--hand);color:var(--stamp-teal);margin:0 0 .25rem;}
+  h2{font:700 1.55rem/1.1 var(--hand);color:var(--stamp-teal);margin:0 0 .5rem;}
+  h3.label{font-size:.82rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin:1.25rem 0 .6rem;}
   p.sub{color:var(--ink-soft);margin:0 0 1.5rem;font-size:.92rem;}
-  .card{background:var(--card);border:1px solid var(--paper-line);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.5rem;margin-bottom:1.25rem;}
+  .card{background:var(--card);border:1px solid var(--paper-line);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.25rem;}
   label{display:block;font-size:.82rem;font-weight:600;color:var(--ink-soft);margin-bottom:.35rem;}
   input[type=text],input[type=password]{width:100%;padding:.65rem .8rem;border:1px solid var(--paper-line);border-radius:10px;font-size:.95rem;font-family:inherit;}
   .row{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;}
   .row>div{flex:1;min-width:160px;}
-  button{background:var(--stamp-teal);color:#fff;border:none;padding:.65rem 1.1rem;border-radius:10px;font-weight:600;cursor:pointer;font-size:.92rem;}
+  button{background:var(--stamp-teal);color:#fff;border:none;padding:.65rem 1.1rem;border-radius:6px;font-weight:700;cursor:pointer;font-size:.92rem;min-height:44px;}
+  button:hover{background:#17297F;}
+  button.ghost:hover,.bank-tab:not(.active):hover{background:var(--stamp-teal-bg);}
+  .row-btn:hover{background:none;}
   button.ghost{background:#fff;color:var(--ink);border:1px solid var(--paper-line);}
   table{width:100%;border-collapse:collapse;font-size:.9rem;}
   th{text-align:left;color:var(--ink-soft);font-size:.78rem;text-transform:uppercase;letter-spacing:.03em;padding:.4rem .5rem;border-bottom:1px solid var(--paper-line);}
@@ -31,7 +57,7 @@
   tr.student-row:hover{background:var(--stamp-teal-bg);}
   .code{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:600;background:var(--paper);padding:.15rem .4rem;border-radius:6px;}
   .row-btn{background:none;border:none;color:var(--stamp-teal);font-size:.75rem;text-decoration:underline;cursor:pointer;margin-left:.4rem;padding:0;}
-  .row-btn.danger{color:#C84B31;}
+  .row-btn.danger{color:var(--warn);}
   .speak-cell{display:flex;flex-direction:column;gap:.25rem;align-items:flex-start;}
   .speak-status{font-size:.82rem;}
   .speak-status.on{color:var(--stamp-teal);font-weight:600;}
@@ -40,7 +66,7 @@
   .speak-grant select{font-size:.72rem;padding:.15rem .25rem;border:1px solid var(--paper-line);border-radius:6px;font-family:inherit;background:#fff;color:var(--ink);}
   .speak-grant button{font-size:.72rem;padding:.2rem .5rem;border-radius:6px;}
   .speak-meta{font-size:.68rem;color:var(--ink-faint);}
-  .new-code{font-size:1.4rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;color:var(--seal-gold);text-align:center;padding:.75rem;background:#F7EEDC;border-radius:10px;margin-top:.75rem;display:none;}
+  .new-code{font-size:1.4rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;color:var(--stamp-teal);text-align:center;padding:.75rem;background:#FFFFFF;border:1px solid var(--paper-line);border-radius:10px;margin-top:.75rem;display:none;}
   #gate{max-width:380px;margin:4rem auto 0;}
   #app{display:none;}
   .history{display:none;margin-top:.5rem;}
@@ -49,7 +75,7 @@
   .bar-track{height:8px;background:var(--paper-line);border-radius:6px;overflow:hidden;}
   .bar-fill{height:100%;background:var(--stamp-teal);border-radius:6px;}
   .trend-block{margin-bottom:1.1rem;}
-  .trend-block h5{font-size:.82rem;color:var(--ink-soft);margin-bottom:.4rem;}
+  .trend-block h4{font-size:.82rem;color:var(--ink-soft);margin-bottom:.4rem;}
   .trend-row, .mistake-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem;font-size:.82rem;}
   .trend-row .trend-date{width:64px;flex-shrink:0;color:var(--ink-faint);}
   .trend-row .trend-score{width:56px;flex-shrink:0;text-align:right;font-weight:600;color:var(--ink);}
@@ -67,9 +93,9 @@
   .hc-section{margin-bottom:.7rem;font-size:.85rem;line-height:1.55;}
   .hc-section b{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);margin-bottom:.25rem;}
   .hc-text{white-space:pre-wrap;background:#fff;border-radius:6px;padding:.5rem .65rem;border:1px solid var(--paper-line);}
-  .hc-correction{background:#FBEDE8;border-left:3px solid #C84B31;border-radius:6px;padding:.4rem .6rem;margin-bottom:.3rem;}
+  .hc-correction{background:var(--warn-bg);border-left:3px solid var(--warn);border-radius:6px;padding:.4rem .6rem;margin-bottom:.3rem;}
   .hc-suggestion{background:var(--stamp-teal-bg);border-left:3px solid var(--stamp-teal);border-radius:6px;padding:.4rem .6rem;margin-bottom:.3rem;}
-  .hc-tag{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;background:#C84B31;color:#fff;border-radius:5px;padding:.05rem .35rem;margin-right:.3rem;}
+  .hc-tag{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;background:var(--warn);color:#fff;border-radius:5px;padding:.05rem .35rem;margin-right:.3rem;}
   .bank-select{width:100%;padding:.6rem .7rem;border:1px solid var(--paper-line);border-radius:10px;font-size:.92rem;font-family:inherit;background:#fff;color:var(--ink);}
   .bank-group{display:flex;align-items:center;gap:.75rem;padding:.6rem .7rem;border:1px solid var(--paper-line);border-radius:10px;margin-bottom:.5rem;font-size:.86rem;flex-wrap:wrap;}
   .bank-group .bg-tasks{font-weight:700;width:92px;flex-shrink:0;white-space:nowrap;}
@@ -91,25 +117,25 @@
   .bank-entry-head .be-meta{color:var(--ink-faint);font-size:.76rem;}
   .bank-verdict{margin-left:auto;font-size:.76rem;font-weight:700;padding:.15rem .5rem;border-radius:6px;}
   .bank-verdict.good{background:var(--stamp-teal-bg);color:var(--stamp-teal);}
-  .bank-verdict.warn{background:#FBEDE8;color:#C84B31;}
+  .bank-verdict.warn{background:var(--warn-bg);color:var(--warn);}
   .bank-body{display:none;padding:.9rem 1rem 1rem;background:var(--paper);border-top:1px solid var(--paper-line);}
   .bank-body.open{display:block;}
-  .bank-warn{background:#FBEDE8;border-left:3px solid #C84B31;border-radius:6px;padding:.4rem .6rem;margin-bottom:.4rem;font-size:.8rem;}
+  .bank-warn{background:var(--warn-bg);border-left:3px solid var(--warn);border-radius:6px;padding:.4rem .6rem;margin-bottom:.4rem;font-size:.8rem;}
   .bank-passage{white-space:pre-wrap;background:#fff;border:1px solid var(--paper-line);border-radius:6px;padding:.6rem .7rem;font-size:.85rem;line-height:1.6;max-height:240px;overflow:auto;margin-bottom:.8rem;}
   .bank-item{background:#fff;border:1px solid var(--paper-line);border-radius:8px;padding:.55rem .7rem;margin-bottom:.45rem;font-size:.84rem;}
-  .bank-item.disputed{border-color:#C84B31;background:#FEF7F5;}
+  .bank-item.disputed{border-color:var(--warn);background:#FEF7F5;}
   .bank-item .bi-q{font-weight:600;margin-bottom:.3rem;}
   .bank-opt{padding:.12rem 0 .12rem .9rem;color:var(--ink-soft);position:relative;}
   .bank-opt.correct{color:var(--stamp-teal);font-weight:600;}
   .bank-opt.correct:before{content:"✓";position:absolute;left:0;}
-  .bank-flag{font-size:.72rem;color:#C84B31;margin-top:.3rem;}
+  .bank-flag{font-size:.72rem;color:var(--warn);margin-top:.3rem;}
   .bank-actions{display:flex;gap:.5rem;margin-top:.9rem;flex-wrap:wrap;}
   .bank-actions button{font-size:.82rem;}
   .bank-empty{color:var(--ink-faint);font-size:.85rem;padding:.6rem 0;}
   .bank-busy{color:var(--stamp-teal);font-size:.82rem;padding:.4rem 0;}
   .bank-why{margin-top:.4rem;padding:.4rem .55rem;border-radius:6px;background:var(--paper);border-left:3px solid var(--stamp-teal);font-size:.8rem;line-height:1.5;}
   .bank-why b{display:block;font-size:.65rem;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);margin-bottom:.15rem;}
-  .bank-why.missing{border-left-color:#C84B31;color:#C84B31;font-style:italic;}
+  .bank-why.missing{border-left-color:var(--warn);color:var(--warn);font-style:italic;}
 </style>
 </head>
 <body>
@@ -117,7 +143,7 @@
 
   <div id="gate" class="card">
     <h1>Exam Prep — Roster</h1>
-    <p class="sub">Teacher access only.</p>
+    <p class="sub">For the owner. Enter the admin key to open the roster.</p>
     <label for="adminKeyInput">Admin key</label>
     <input type="password" id="adminKeyInput" placeholder="Enter your admin key">
     <button style="width:100%;margin-top:.75rem" id="unlockBtn">Unlock</button>
@@ -125,7 +151,7 @@
 
   <div id="app">
     <h1>Roster &amp; gradebook</h1>
-    <p><a href="content.html">Reading &amp; Listening content desk</a></p>
+    <p class="hub-hide"><a href="content.html">Reading &amp; Listening content desk</a> · <a href="owner.html">Owner's page (all pages in one place)</a></p>
     <p class="sub">Create student codes and review submission history.</p>
 
     <div class="card">
@@ -144,12 +170,13 @@
     </div>
 
     <div class="card">
-      <h3 style="font-family:'Lora',serif;font-size:1rem;margin-bottom:.4rem">Backup</h3>
-      <p style="font-size:.82rem;color:var(--ink-soft);line-height:1.6;margin-bottom:.7rem">
-        Downloads every table — students, submissions, payments, the asset index — as one
-        JSON file. Nobody else is making this backup: Cloudflare does not snapshot D1 for
-        you, and the audio can always be regenerated while a record of who paid for what
-        cannot. Worth doing before any migration, and on a routine you actually keep.
+      <h2>Backup</h2>
+      <p style="font-size:.88rem;color:var(--ink-soft);line-height:1.6;margin-bottom:.7rem">
+        Downloads every table (students, submissions, payments, the question bank, practice
+        attempts, the asset index) as one JSON file you keep. Cloudflare's D1 console can also
+        roll the whole database back to an earlier moment (/bookmark and /restore, "Time
+        Travel"), but that undoes everything written since; this file is your own copy.
+        Do it before any change to the database, and on a routine you keep.
       </p>
       <button id="exportBtn">Download backup</button>
       <div class="new-code" id="exportStatus"></div>
@@ -163,15 +190,15 @@
     </div>
 
     <div class="card history" id="historyCard">
-      <h3 id="historyTitle" style="font-family:'Lora',serif"></h3>
+      <h2 id="historyTitle"></h2>
       <div id="historyProgress"></div>
-      <h4 style="font-size:.85rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin:1.25rem 0 .6rem">Submission history</h4>
+      <h3 class="label">Submission history</h3>
       <div id="historyList"></div>
     </div>
     <!-- Question bank: generate listening/reading material, then review it before any
          student can see it. Nothing here is live until it is approved. -->
     <div class="card" id="bankCard">
-      <h3 style="font-family:'Lora',serif;margin:0 0 .2rem">Reading &amp; listening bank</h3>
+      <h2>Reading &amp; listening bank</h2>
       <p class="sub" style="margin-bottom:1rem">Generated material is checked automatically, then waits here for you. Students only ever see what you approve.</p>
 
       <div class="row">
@@ -188,8 +215,8 @@
         <div>
           <label for="bankSkill">Section</label>
           <select id="bankSkill" class="bank-select">
-            <option value="reading">Чтение (Reading)</option>
-            <option value="listening">Аудирование (Listening)</option>
+            <option value="reading">Reading</option>
+            <option value="listening">Listening</option>
           </select>
         </div>
       </div>
@@ -200,7 +227,7 @@
       <div class="bank-divider"></div>
 
       <div class="bank-queue-head">
-        <h4 style="margin:0;font-size:.95rem">Waiting for you</h4>
+        <h3 style="margin:0;font-size:1rem">Waiting for you</h3>
         <div class="bank-tabs">
           <button class="bank-tab active" data-status="draft">To review</button>
           <button class="bank-tab" data-status="approved">Approved</button>
@@ -222,7 +249,7 @@ const EXAM_LABELS = {
   ielts: "IELTS", toefl: "TOEFL iBT", det: "Duolingo English Test",
   fce: "Cambridge FCE (B2 First)", cae: "Cambridge CAE (C1 Advanced)", cpe: "Cambridge CPE (C2 Proficiency)",
   pet: "Cambridge PET (B1 Preliminary)", ket: "Cambridge KET (A2 Key)",
-  oge: "ОГЭ (Russian state, grade 9)", ege: "ЕГЭ (Russian state, grade 11)"
+  oge: "ОГЭ (Russian state, grade 9)", ege: "ЕГЭ (Russian state, grade 11)", sat: "SAT"
 };
 
 function escapeHtml(s) {
@@ -249,6 +276,8 @@ async function unlock() {
 }
 document.getElementById("unlockBtn").addEventListener("click", unlock);
 
+// A key kept from earlier in this browser tab (this page, or the owner's page) skips the gate.
+// The bank panel is loaded at the end of the script, not here (see the note there).
 if (adminKey) {
   document.getElementById("gate").style.display = "none";
   document.getElementById("app").style.display = "block";
@@ -348,14 +377,14 @@ async function loadRoster() {
         : "";
 
       tr.innerHTML = `<td>${escapeHtml(s.name)}</td><td><span class="code">${escapeHtml(s.code)}</span></td><td>${escapeHtml(s.cohort || "—")}</td>
-        <td${overQuota ? ' style="color:#C84B31;font-weight:600"' : ""} title="${escapeHtml(String(s.submission_count))} submissions in total, including speaking">${escapeHtml(String(writingCount))}/${escapeHtml(String(limit))}
+        <td${overQuota ? ' style="color:var(--warn);font-weight:600"' : ""} title="${escapeHtml(String(s.submission_count))} submissions in total, including speaking">${escapeHtml(String(writingCount))}/${escapeHtml(String(limit))}
           <button type="button" class="row-btn add-attempts-btn">+5</button>
           <button type="button" class="row-btn set-limit-btn" data-limit="${escapeHtml(String(limit))}">set…</button>
         </td>
-        <td${outOfAttempts ? ' style="color:#C84B31;font-weight:600"' : ""}>${escapeHtml(String(attemptsUsed))}/${escapeHtml(String(attemptsLimit))}
+        <td${outOfAttempts ? ' style="color:var(--warn);font-weight:600"' : ""}>${escapeHtml(String(attemptsUsed))}/${escapeHtml(String(attemptsLimit))}
           <button type="button" class="row-btn add-answers-btn">+10</button>
         </td>
-        <td${overAudio ? ' style="color:#C84B31;font-weight:600"' : ""}>${escapeHtml(String(audioUsed))}/${escapeHtml(String(secondsLimit))}
+        <td${overAudio ? ' style="color:var(--warn);font-weight:600"' : ""}>${escapeHtml(String(audioUsed))}/${escapeHtml(String(secondsLimit))}
           <button type="button" class="row-btn reset-audio-btn">reset</button>
         </td>
         <td>
@@ -463,7 +492,7 @@ async function loadHistory(code, name) {
 function renderSectionHistory(attempts) {
   let host = document.getElementById("sectionHistory");
   if (!host) { host = document.createElement("div"); host.id = "sectionHistory"; document.getElementById("historyProgress").after(host); }
-  host.innerHTML = "<h4>Reading &amp; Listening practice</h4>";
+  host.innerHTML = "<h3 class=\"label\">Reading &amp; Listening practice</h3>";
   if (!attempts.length) { host.insertAdjacentHTML("beforeend", "<p>No section attempts yet.</p>"); return; }
   for (const attempt of attempts) {
     let record; try { record = JSON.parse(attempt.correct_json) || {}; } catch { record = {}; }
@@ -490,10 +519,10 @@ function renderHistoryProgress(submissions) {
   const byExam = {};
   submissions.forEach(s => { (byExam[s.exam_key] ||= []).push(s); });
 
-  let html = "<h4 style=\"font-size:.85rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:.6rem\">Score trend</h4>";
+  let html = "<h3 class=\"label\" style=\"margin-top:0\">Score trend</h3>";
   Object.keys(byExam).forEach(examKey => {
     const subs = byExam[examKey].slice().reverse(); // API returns newest-first; flip to chronological
-    html += `<div class="trend-block"><h5>${escapeHtml(EXAM_LABELS[examKey] || examKey)}</h5>`;
+    html += `<div class="trend-block"><h4>${escapeHtml(EXAM_LABELS[examKey] || examKey)}</h4>`;
     subs.slice(-8).forEach(s => {
       const pct = s.max_total ? Math.min(100, (s.total_score / s.max_total) * 100) : 0;
       const date = new Date(s.created_at).toLocaleDateString();
@@ -518,12 +547,12 @@ function renderHistoryProgress(submissions) {
   const sortedMistakes = Object.entries(mistakeCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
   if (sortedMistakes.length) {
     const maxCount = sortedMistakes[0][1];
-    html += "<h4 style=\"font-size:.85rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin:1rem 0 .6rem\">Recurring mistakes</h4>";
+    html += "<h3 class=\"label\" style=\"margin-top:1rem\">Recurring mistakes</h3>";
     sortedMistakes.forEach(([label, count]) => {
       const pct = Math.round((count / maxCount) * 100);
       html += `<div class="mistake-row">
         <span class="mistake-label">${escapeHtml(label)}</span>
-        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:#C84B31"></div></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--warn)"></div></div>
         <span class="mistake-count">${count}</span>
       </div>`;
     });
@@ -546,7 +575,7 @@ function renderHistoryList(submissions) {
     try { criteriaFeedback = JSON.parse(s.criteria_feedback || "[]"); } catch (e) {}
 
     const correctionsHtml = corrections.length
-      ? corrections.map(c => `<div class="hc-correction">${c.typeLabel ? `<span class="hc-tag">${escapeHtml(c.typeLabel)}</span>` : ""}<span style="text-decoration:line-through;color:#C84B31">${escapeHtml(c.original)}</span> → ${escapeHtml(c.correction)}${c.explanation ? `<div style="font-size:.8rem;color:var(--ink-soft);margin-top:.2rem">${escapeHtml(c.explanation)}</div>` : ""}</div>`).join("")
+      ? corrections.map(c => `<div class="hc-correction">${c.typeLabel ? `<span class="hc-tag">${escapeHtml(c.typeLabel)}</span>` : ""}<span style="text-decoration:line-through;color:var(--warn)">${escapeHtml(c.original)}</span> → ${escapeHtml(c.correction)}${c.explanation ? `<div style="font-size:.8rem;color:var(--ink-soft);margin-top:.2rem">${escapeHtml(c.explanation)}</div>` : ""}</div>`).join("")
       : "<p style='color:var(--ink-faint);font-size:.82rem'>No corrections flagged.</p>";
 
     const suggestionsHtml = suggestions.length
@@ -611,7 +640,7 @@ document.getElementById("addBtn").addEventListener("click", async () => {
 let bankStatus = "draft";
 let bankBusy = false;
 
-const BANK_SKILL_LABEL = { reading: "Чтение", listening: "Аудирование" };
+const BANK_SKILL_LABEL = { reading: "Reading", listening: "Listening" };
 
 function bankQs(id) { return document.getElementById(id); }
 
@@ -667,7 +696,7 @@ async function loadBankGroups() {
 
   bankQs("bankSpecNote").textContent =
     data.section.maxPrimary == null ? "Practice profiles chosen for this app. Correct-answer counts only; not a complete exam paper." :
-    `${data.section.label} — tasks ${data.section.tasks[0]}–${data.section.tasks[1]}, ${data.section.maxPrimary} первичных баллов. Structure from the ФИПИ спецификация for ${data.section.specYear}.`;
+    `${data.section.label} — tasks ${data.section.tasks[0]}–${data.section.tasks[1]}, ${data.section.maxPrimary} primary points. Structure from the FIPI specification for ${data.section.specYear}.`;
 }
 
 async function generateBankEntry(taskFrom, btn) {
@@ -773,10 +802,14 @@ function renderBankEntry(entry, index) {
     body.appendChild(div);
   }
 
-  const passage = document.createElement("div");
-  passage.className = "bank-passage";
-  passage.textContent = entry.passage || "";
-  body.appendChild(passage);
+  // A discrete-stimulus set (the SAT) has no shared passage: each question carries its own
+  // text, shown with that question below. An empty box here would look like missing text.
+  if (entry.passage) {
+    const passage = document.createElement("div");
+    passage.className = "bank-passage";
+    passage.textContent = entry.passage;
+    body.appendChild(passage);
+  }
 
   const disputed = new Set();
   if (agreed !== null && total !== null && !clean) {
@@ -836,6 +869,17 @@ function bankWhy(heading, text) {
   return box;
 }
 
+// This panel does not load pictures; it says one exists, gives its brief and sends the reviewer
+// to the content desk, where the picture itself is shown before approval.
+function bankPicture(item) {
+  const p = document.createElement("p");
+  p.className = "bank-flag";
+  p.innerHTML = (item.image ? "This question has an illustration. View it in the " : "This question needs an illustration; none is attached yet. Attach and view it in the ") +
+    '<a href="content.html">content desk</a> before approving.' +
+    (item.imageBrief ? ` Illustration brief: ${escapeHtml(item.imageBrief)}` : "");
+  return p;
+}
+
 function renderBankItems(entry, disputed) {
   const host = document.createElement("div");
   const items = entry.items;
@@ -844,8 +888,17 @@ function renderBankItems(entry, disputed) {
     for (const [i,item] of items.entries()) {
       const box = document.createElement("div"); box.className = "bank-item";
       const answers = entry.format === "table" ? item.accepted.join(" / ") : item.answer.map(n=>item.options[n]).join(" / ");
-      box.innerHTML = `<div class="bi-q">${i+1}. ${escapeHtml(item.label || item.q)}</div><p>Accepted: ${escapeHtml(answers)}</p>`;
+      // Everything the student is shown for this question, then the key. A field missing here is
+      // a question approved without being read (tested for every profile in test/questionfields.mjs).
+      const shown = [
+        item.original ? `<p>Original sentence: ${escapeHtml(item.original)}</p>` : "",
+        item.keyword ? `<p>Key word: <b>${escapeHtml(item.keyword)}</b></p>` : "",
+        item.stem ? `<p>Base word: <b>${escapeHtml(item.stem)}</b></p>` : "",
+        Array.isArray(item.options) ? item.options.map((o, j) => `<div class="bank-opt${item.answer.includes(j) ? " correct" : ""}">(${j}) ${escapeHtml(o)}</div>`).join("") : "",
+      ].join("");
+      box.innerHTML = `<div class="bi-q">${i+1}. ${escapeHtml(item.label || item.q)}</div>${shown}<p>Accepted: ${escapeHtml(answers)}</p>`;
       if (item.prefix) { const note = document.createElement("p"); note.textContent = `Visible prefix: ${item.prefix}; ${item.missingLetters} missing letters.`; box.appendChild(note); }
+      if (item.image || item.imageBrief) box.appendChild(bankPicture(item));
       box.appendChild(bankWhy("Why",item.why)); host.appendChild(box);
     }
     const link = document.createElement("a"); link.href = "content.html"; link.textContent = "Review illustrations, audio and full JSON in the content desk"; host.appendChild(link);
@@ -860,6 +913,7 @@ function renderBankItems(entry, disputed) {
     const spare = items.options.map((_, i) => i).filter((i) => !used.has(i));
     box.innerHTML = `<div class="bi-q">Options</div>${opts}` +
       (spare.length ? `<div class="bank-flag">Spare option (matches nothing): ${spare.map((i) => "(" + i + ")").join(", ")}</div>` : "");
+    if (items.image || items.imageBrief) box.appendChild(bankPicture(items));
     host.appendChild(box);
 
     (items.targets || []).forEach((t, i) => {
@@ -867,7 +921,7 @@ function renderBankItems(entry, disputed) {
       const div = document.createElement("div");
       div.className = "bank-item";
       div.innerHTML =
-        `<div class="bi-q">${i + 1}. ${escapeHtml(String(t).slice(0, 400))}</div>` +
+        `<div class="bi-q">${i + 1}. ${escapeHtml(String(t))}</div>` +
         `<div class="bank-opt correct">(${answer}) ${escapeHtml(String((items.options || [])[answer] ?? ""))}</div>`;
       const why = Array.isArray(items.why) ? items.why[i] : null;
       div.appendChild(bankWhy("Why", why));
@@ -890,12 +944,14 @@ function renderBankItems(entry, disputed) {
     const opts = (it.options || [])
       .map((o, j) => `<div class="bank-opt${j === it.answer ? " correct" : ""}">(${j}) ${escapeHtml(o)}</div>`)
       .join("");
-    div.innerHTML = `<div class="bi-q">${i + 1}. ${escapeHtml(it.q || "")}</div>${opts}`;
+    const stimulus = it.stimulus ? `<div class="bank-passage">${escapeHtml(it.stimulus)}</div>` : "";
+    div.innerHTML = `${stimulus}<div class="bi-q">${i + 1}. ${escapeHtml(it.q || "")}</div>${opts}`;
 
     // The explanation is what a student will actually read, so it is reviewed here or
     // it is not reviewed at all. Wrong reasoning behind a right answer still teaches
     // the wrong thing.
     div.appendChild(bankWhy("Why the answer is right", it.why));
+    if (it.image || it.imageBrief) div.appendChild(bankPicture(it));
     if (Array.isArray(it.whyNot)) {
       it.whyNot.forEach((w, j) => {
         if (j === it.answer || !w) return;

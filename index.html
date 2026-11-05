@@ -4,9 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Exam Prep — Writing &amp; Speaking Practice</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts/fonts.css">
 <style>
   :root{
     --paper:#FAF7F1;
@@ -360,33 +359,7 @@
   #legalContent p,#legalContent li{font-size:.85rem;line-height:1.65;color:var(--ink);}
   #legalContent ul{margin:.3rem 0 .3rem 1.1rem;}
   #legalContent .legal-meta{font-size:.75rem;color:var(--muted);margin-bottom:.8rem;}
-  .reading-pick{display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;}
-  .reading-pick button{white-space:nowrap;}
-  .reading-split{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-top:1rem;}
-  @media (max-width:760px){ .reading-split{grid-template-columns:1fr;} }
-  .reading-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:.4rem;}
-  .reading-passage{white-space:pre-wrap;line-height:1.75;font-size:.95rem;background:#fff;border:1px solid var(--paper-line);border-radius:10px;padding:1rem 1.1rem;max-height:60vh;overflow:auto;}
-  .reading-q{border:1px solid var(--paper-line);border-radius:10px;padding:.7rem .85rem;margin-bottom:.6rem;background:#fff;}
-  .reading-q .rq-stimulus{max-height:none;margin-bottom:.6rem;background:var(--paper,#fcfbf7);font-size:.9rem;}
-  .reading-q .rq-stem{font-weight:600;font-size:.92rem;margin-bottom:.45rem;line-height:1.5;}
-  .reading-opt{display:flex;gap:.5rem;align-items:flex-start;padding:.25rem 0;font-size:.9rem;line-height:1.5;cursor:pointer;}
-  .reading-opt input{margin-top:.25rem;flex-shrink:0;}
-  .reading-q select{width:100%;padding:.5rem .6rem;border:1px solid var(--paper-line);border-radius:8px;font-family:inherit;font-size:.9rem;background:#fff;color:var(--ink);}
-  .reading-actions{display:flex;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap;}
-  .reading-progress{font-size:.85rem;color:var(--ink-soft);}
-  .reading-score{font-family:'Lora',serif;font-size:2rem;font-weight:700;color:var(--stamp-teal);}
-  .reading-score-sub{color:var(--ink-soft);font-size:.9rem;margin-bottom:.25rem;}
-  .reading-q.right{border-color:var(--stamp-teal);background:#F4FAF8;}
-  .reading-q.wrong{border-color:#C84B31;background:#FEF7F5;}
-  .reading-verdict{font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:.35rem;}
-  .reading-q.right .reading-verdict{color:var(--stamp-teal);}
-  .reading-q.wrong .reading-verdict{color:#C84B31;}
-  .reading-opt.is-key{color:var(--stamp-teal);font-weight:600;}
-  .reading-opt.is-chosen-wrong{color:#C84B31;text-decoration:line-through;}
   .pill-disabled{opacity:.45;cursor:not-allowed;}
-  .reading-why{margin-top:.5rem;padding:.5rem .65rem;border-radius:8px;background:var(--paper);border-left:3px solid var(--stamp-teal);font-size:.85rem;line-height:1.55;}
-  .reading-why b{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);margin-bottom:.2rem;}
-  .reading-q.wrong .reading-why:first-of-type{border-left-color:#C84B31;}
 </style>
 </head>
 <body>
@@ -403,7 +376,7 @@
       <div>
         <label for="studentCode">Your code</label>
         <input type="text" id="studentCode" placeholder="e.g. FX7-K2N">
-        <p class="hint">Ask your teacher for the code they assigned you. <button type="button" class="link-btn" id="viewProgressBtn" style="margin-left:.3rem">View my progress</button></p>
+        <p class="hint">Enter the student code you were given. <button type="button" class="link-btn" id="viewProgressBtn" style="margin-left:.3rem">View my progress</button></p>
       </div>
       <div>
         <label for="examSelect">Exam</label>
@@ -507,7 +480,7 @@
               <li>Это <em>не</em> официальный балл. Настоящую оценку ставит только экзаменационный центр. Здесь — тренировка и ориентир.</li>
               <li>Произношение оценивается по темпу речи, паузам и общему впечатлению модели, а не пофонемно. Это полезный сигнал, но не фонетическая экспертиза.</li>
               <li>Алгоритм DET закрыт производителем, поэтому оценка по нему — приближение по опубликованным критериям.</li>
-              <li>Живой преподаватель слышит то, чего не слышит модель. Это дополнение к занятиям, а не замена им.</li>
+              <li>Живой экзаменатор слышит то, чего не слышит модель. Это тренировка, а не оценка экзаменатора.</li>
             </ul>
             <p class="expect-promise">Если раздел не заработал так, как здесь описано, напишите нам — разберёмся и вернём деньги за неиспользованные ответы. Условия возврата — в оферте внизу страницы.</p>
           </div>
@@ -536,36 +509,6 @@
           <button class="primary" id="gradeTranscriptBtn" style="margin-top:.75rem">Grade this transcript</button>
         </div>
       </div>
-    </div>
-    <!-- Reading: bank-served sections. Free, objectively marked, no model call. -->
-    <div id="readingPane" style="display:none">
-      <div class="reading-pick">
-        <div style="flex:1;min-width:200px">
-          <label for="readingTaskSelect">Section task</label>
-          <select id="readingTaskSelect"></select>
-        </div>
-        <button type="button" class="secondary" id="readingStartBtn">Start this task</button>
-      </div>
-      <div class="access-note" id="readingNote" style="margin-top:.75rem"></div>
-
-      <div id="readingWork" style="display:none">
-        <div class="reading-split">
-          <div>
-            <div class="reading-label" id="readingPassageLabel">Text</div>
-            <div class="reading-passage" id="readingPassage"></div>
-          </div>
-          <div>
-            <div class="reading-label" id="readingQuestionsLabel">Questions</div>
-            <div id="readingQuestions"></div>
-          </div>
-        </div>
-        <div class="reading-actions">
-          <button class="primary" id="readingSubmitBtn">Check my answers</button>
-          <span class="reading-progress" id="readingProgress"></span>
-        </div>
-      </div>
-
-      <div id="readingResult" style="display:none"></div>
     </div>
 
   </section>
@@ -655,7 +598,7 @@
 
     <p><strong>Как оплатить:</strong></p>
     <ol class="price-steps">
-      <li>Получите код ученика у преподавателя и введите его в поле «Your code» вверху страницы.</li>
+      <li>Введите свой код ученика в поле «Your code» вверху страницы.</li>
       <li>Нажмите «Оплатить» напротив нужного пакета — откроется защищённая страница ЮKassa.</li>
       <li>После оплаты доступ к разговорной практике открывается автоматически, в течение минуты.</li>
     </ol>
@@ -793,7 +736,7 @@ const LEGAL_DOCS = {
 
       <h3>1. Какие данные обрабатываются</h3>
       <ul>
-        <li>Код ученика, выданный преподавателем, и имя, под которым он записан.</li>
+        <li>Код ученика и имя, под которым он записан.</li>
         <li>Тексты ваших письменных работ и расшифровки устных ответов.</li>
         <li>Аудиозаписи ваших устных ответов — на время, необходимое для расшифровки.</li>
         <li>История проверок и выставленных оценок.</li>
@@ -903,7 +846,9 @@ async function loadExams() {
 // Only ОГЭ and ЕГЭ have an objectively-marked reading section today. Offering the tab
 // for the others would hand a student the raw validation error from the Worker, in
 // English, in a Russian interface - which is exactly what it did before this existed.
-let sectionExams = ["ege", "oge"];
+// Used only if /exams cannot be read; the Worker's own list (EXAM_SECTIONS) replaces it. Kept in
+// step with that list (2026-11-05), so an offline load does not switch off Reading for most exams.
+let sectionExams = ["fce", "cae", "cpe", "pet", "ket", "ielts", "toefl", "ege", "oge", "sat"];
 // Exams that have a Reading section but no Listening one. The Worker's /exams reply does
 // not say which skills each exam has, so this is the one place the page states it.
 const noListeningExams = ["sat"];
@@ -921,16 +866,6 @@ function syncReadingPill() {
     listenPill.disabled = !hasListening;
     listenPill.classList.toggle("pill-disabled", !hasListening);
     listenPill.title = hasListening ? "" : "There is no Listening practice for this exam yet.";
-  }
-  // Switching to an exam without reading while reading is open must not strand the
-  // student on an empty pane.
-  if (!supported && currentSkill === "reading") {
-    const writing = document.querySelector('[data-skill="writing"]');
-    document.querySelectorAll(".pill").forEach(x => x.classList.remove("active"));
-    writing.classList.add("active");
-    currentSkill = "writing";
-    onSkillChange();
-    loadTasks();
   }
 }
 
@@ -1025,7 +960,7 @@ function applyPromptVisibility(t) {
   }
 }
 
-examSelect.addEventListener("change", () => { syncReadingPill(); return currentSkill === "reading" ? loadReadingTasks() : loadTasks(); });
+examSelect.addEventListener("change", () => { syncReadingPill(); loadTasks(); });
 taskSelect.addEventListener("change", showTaskMeta);
 
 document.querySelectorAll(".pill").forEach(p => {
@@ -1041,10 +976,7 @@ document.querySelectorAll(".pill").forEach(p => {
     p.classList.add("active");
     currentSkill = p.dataset.skill;
     onSkillChange();
-    // Reading is served from the approved bank, not from the task templates, and
-    // /tasks does not know the skill - asking it would just 400.
-    if (currentSkill === "reading") loadReadingTasks();
-    else loadTasks();
+    loadTasks();
   });
 });
 
@@ -1052,23 +984,10 @@ document.querySelectorAll(".pill").forEach(p => {
 // The writing flow is left completely untouched — it's simply hidden.
 function onSkillChange() {
   const speaking = currentSkill === "speaking";
-  const reading = currentSkill === "reading";
-  document.getElementById("writingPane").style.display = (speaking || reading) ? "none" : "";
+  document.getElementById("writingPane").style.display = speaking ? "none" : "";
   document.getElementById("speakingPane").style.display = speaking ? "" : "none";
-  document.getElementById("readingPane").style.display = reading ? "" : "none";
   document.getElementById("results").classList.remove("visible");
 
-  // The prompt box, the generator, the photo uploader and the task dropdown all belong
-  // to the writing and speaking flows. Reading brings its own text and its own picker.
-  for (const id of ["generateBtn", "promptWrap", "promptHiddenNote", "imageUploadWrap", "taskSelectWrap", "taskMeta"]) {
-    const el = document.getElementById(id);
-    if (el) el.style.display = reading ? "none" : "";
-  }
-  if (reading) {
-    cancelSpeech();
-    stopRecordingHardware();
-    return;
-  }
   if (speaking) {
     stopRecordingHardware();
     resetSpeakingFlow();
@@ -1705,7 +1624,7 @@ async function renderPlans() {
 
   if (!plans || !plans.length) {
     grid.innerHTML = "";
-    hint.textContent = "Не удалось загрузить тарифы. Обновите страницу или напишите преподавателю.";
+    hint.textContent = "Не удалось загрузить тарифы. Обновите страницу или напишите нам.";
     return;
   }
 
@@ -2576,7 +2495,7 @@ function renderResults(data, originalText, usedPrompt) {
   // Both notes are fixed strings chosen by exam/skill — no interpolated model output.
   const disclaimerParts = [];
   if (data.examKey === "det") disclaimerParts.push("Practice estimate — not an official Duolingo English Test score.");
-  if (data.skill === "speaking") disclaimerParts.push("Pronunciation is estimated from transcript fluency — for detailed phonetic feedback, work with your teacher directly.");
+  if (data.skill === "speaking") disclaimerParts.push("Pronunciation is estimated from transcript fluency. It is not a sound-by-sound check.");
   document.getElementById("disclaimer").textContent = disclaimerParts.join(" ");
 
   const critFbBlock = document.getElementById("criteriaFeedbackBlock");
@@ -2766,326 +2685,6 @@ function renderProgress(submissions) {
 }
 
 loadExams();
-
-// --- Reading sections -------------------------------------------------------
-//
-// Served from the teacher-approved bank, marked against a stored key. No model call
-// happens anywhere in this flow, which is why it is free and why nothing here touches
-// a quota.
-let readingState = null;   // { bankId, format, answers: [], items }
-
-function readingQs(id) { return document.getElementById(id); }
-
-async function loadReadingTasks() {
-  if (["ielts", "toefl", "fce", "cae", "cpe", "pet", "ket"].includes(examSelect.value)) {
-    readingQs("readingStartBtn").disabled = true;
-    readingQs("readingTaskSelect").innerHTML = "";
-    readingQs("readingNote").textContent = "Opening Reading practice…";
-    window.location.assign("practice.html#/" + examSelect.value + "/reading"); return;
-  }
-  const select = readingQs("readingTaskSelect");
-  const note = readingQs("readingNote");
-  select.innerHTML = "";
-  note.textContent = "Загружаем задания…";
-  readingQs("readingWork").style.display = "none";
-  readingQs("readingResult").style.display = "none";
-
-  try {
-    const res = await fetch(`${BACKEND_URL}/section/available?exam=${encodeURIComponent(examSelect.value)}&skill=reading`);
-    const data = await res.json();
-    if (!res.ok) { note.textContent = data.error || "Не удалось загрузить список заданий."; return; }
-
-    const usable = data.groups.filter(g => g.available);
-    for (const g of data.groups) {
-      const opt = document.createElement("option");
-      const label = g.taskFrom === g.taskTo ? `Задание ${g.taskFrom}` : `Задания ${g.taskFrom}–${g.taskTo}`;
-      opt.value = g.taskFrom;
-      opt.textContent = g.available
-        ? `${label} — ${g.itemCount} ${g.itemCount === 1 ? "вопрос" : "вопросов"}`
-        : `${label} — пока недоступно`;
-      opt.disabled = !g.available;
-      select.appendChild(opt);
-    }
-    const first = data.groups.find(g => g.available);
-    if (first) select.value = String(first.taskFrom);
-
-    readingQs("readingStartBtn").disabled = !usable.length;
-    note.textContent = usable.length
-      ? `${data.section.label}: ${data.section.maxPrimary} первичных баллов за весь раздел. Структура по спецификации ФИПИ ${data.section.specYear} года. Проверка бесплатная и не расходует лимит письменных работ.`
-      : "Для этого экзамена пока нет проверенных текстов. Преподаватель добавит их в ближайшее время.";
-  } catch (e) {
-    note.textContent = "Не удалось связаться с сервером: " + e.message;
-  }
-}
-
-async function startReading() {
-  const code = readingQs("studentCode").value.trim();
-  if (!code) { alert("Сначала введите свой код."); return; }
-
-  const btn = readingQs("readingStartBtn");
-  btn.disabled = true;
-  const original = btn.textContent;
-  btn.textContent = "Загружаем…";
-  readingQs("readingResult").style.display = "none";
-
-  try {
-    const res = await fetch(`${BACKEND_URL}/section/start`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        studentCode: code,
-        examKey: examSelect.value,
-        skill: "reading",
-        taskFrom: Number(readingQs("readingTaskSelect").value),
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) { alert(data.error || "Не удалось загрузить задание."); return; }
-
-    readingState = { bankId: data.bankId, format: data.format, items: data.items, answers: [] };
-    readingQs("readingPassage").textContent = data.passage || "";
-    // A discrete-stimulus task (the SAT) has no shared passage — each question carries
-    // its own text, rendered above that question. Hide the whole left column rather than
-    // showing an empty box with a "Текст" heading over it.
-    const passageColumn = readingQs("readingPassage").parentElement;
-    if (passageColumn) passageColumn.style.display = data.passage ? "" : "none";
-    readingQs("readingPassageLabel").textContent = data.format === "matching" ? "Тексты" : "Текст";
-    // TFNS items are stored in the same shape as multiple choice and render through the
-    // same radio-button path, so only the heading changes: they are statements to judge,
-    // not questions to answer, and calling them "Вопросы" would misdescribe the task.
-    readingQs("readingQuestionsLabel").textContent =
-      data.format === "matching" ? "Подберите заголовки"
-      : data.format === "tfns" ? "Отметьте, верны ли утверждения"
-      : "Вопросы";
-    renderReadingQuestions(data);
-    readingQs("readingWork").style.display = "";
-    readingQs("readingWork").scrollIntoView({ behavior: "smooth", block: "start" });
-    updateReadingProgress();
-  } catch (e) {
-    alert("Не удалось связаться с сервером: " + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = original;
-  }
-}
-
-function renderReadingQuestions(data) {
-  const host = readingQs("readingQuestions");
-  host.innerHTML = "";
-
-  if (data.format === "matching") {
-    // One dropdown per text. Every option stays selectable: stopping a student reusing
-    // an option would quietly mark the paper for them, and the real exam does not.
-    data.items.targets.forEach((target, i) => {
-      const box = document.createElement("div");
-      box.className = "reading-q";
-      box.id = "rq-" + i;
-      const stem = document.createElement("div");
-      stem.className = "rq-stem";
-      stem.textContent = `${i + 1}. ${target}`;
-      const sel = document.createElement("select");
-      const blank = document.createElement("option");
-      blank.value = "";
-      blank.textContent = "— выберите заголовок —";
-      sel.appendChild(blank);
-      data.items.options.forEach((o, j) => {
-        const opt = document.createElement("option");
-        opt.value = String(j);
-        opt.textContent = `${j + 1}. ${o}`;
-        sel.appendChild(opt);
-      });
-      sel.addEventListener("change", () => {
-        readingState.answers[i] = sel.value === "" ? null : Number(sel.value);
-        updateReadingProgress();
-      });
-      box.appendChild(stem);
-      box.appendChild(sel);
-      host.appendChild(box);
-    });
-    return;
-  }
-
-  data.items.forEach((item, i) => {
-    const box = document.createElement("div");
-    box.className = "reading-q";
-    box.id = "rq-" + i;
-    // Discrete-stimulus items carry their own text, which goes above the question.
-    if (item.stimulus) {
-      const text = document.createElement("div");
-      text.className = "reading-passage rq-stimulus";
-      text.textContent = item.stimulus;
-      box.appendChild(text);
-    }
-
-    const stem = document.createElement("div");
-    stem.className = "rq-stem";
-    stem.textContent = `${i + 1}. ${item.q}`;
-    box.appendChild(stem);
-
-    item.options.forEach((o, j) => {
-      const label = document.createElement("label");
-      label.className = "reading-opt";
-      const radio = document.createElement("input");
-      radio.type = "radio";
-      radio.name = "rq" + i;
-      radio.value = String(j);
-      radio.addEventListener("change", () => {
-        readingState.answers[i] = j;
-        updateReadingProgress();
-      });
-      const text = document.createElement("span");
-      text.textContent = o;
-      label.appendChild(radio);
-      label.appendChild(text);
-      box.appendChild(label);
-    });
-    host.appendChild(box);
-  });
-}
-
-function readingAnswerCount() {
-  if (!readingState) return 0;
-  const total = readingState.format === "matching" ? readingState.items.targets.length : readingState.items.length;
-  let answered = 0;
-  for (let i = 0; i < total; i++) if (Number.isInteger(readingState.answers[i])) answered++;
-  return { answered, total };
-}
-
-function updateReadingProgress() {
-  const { answered, total } = readingAnswerCount();
-  readingQs("readingProgress").textContent = `Отвечено ${answered} из ${total}`;
-}
-
-async function submitReading() {
-  if (!readingState) return;
-  const code = readingQs("studentCode").value.trim();
-  const { answered, total } = readingAnswerCount();
-  if (answered < total && !confirm(`Вы ответили на ${answered} из ${total}. Неотвеченные вопросы будут засчитаны как неверные. Проверить?`)) return;
-
-  const btn = readingQs("readingSubmitBtn");
-  btn.disabled = true;
-  const original = btn.textContent;
-  btn.textContent = "Проверяем…";
-  try {
-    const answers = [];
-    for (let i = 0; i < total; i++) answers.push(Number.isInteger(readingState.answers[i]) ? readingState.answers[i] : null);
-    const res = await fetch(`${BACKEND_URL}/section/submit`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentCode: code, bankId: readingState.bankId, answers }),
-    });
-    const data = await res.json();
-    if (!res.ok) { alert(data.error || "Не удалось проверить ответы."); return; }
-    renderReadingResult(data);
-  } catch (e) {
-    alert("Не удалось связаться с сервером: " + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = original;
-  }
-}
-
-function readingWhy(heading, text) {
-  const box = document.createElement("div");
-  box.className = "reading-why";
-  const h = document.createElement("b");
-  h.textContent = heading;
-  const p = document.createElement("span");
-  p.textContent = text;
-  box.appendChild(h);
-  box.appendChild(p);
-  return box;
-}
-
-function renderReadingResult(data) {
-  // Mark up the questions in place so a student reads their mistake next to the
-  // question that caused it, rather than against a list of numbers further down.
-  data.perItem.forEach((item, i) => {
-    const box = document.getElementById("rq-" + i);
-    if (!box) return;
-    box.classList.remove("right", "wrong");
-    box.classList.add(item.correct ? "right" : "wrong");
-
-    const verdict = document.createElement("div");
-    verdict.className = "reading-verdict";
-    verdict.textContent = item.correct ? "Верно" : (item.chosen === null ? "Без ответа" : "Неверно");
-    box.insertBefore(verdict, box.firstChild);
-
-    if (data.format === "matching" || (data.items && !Array.isArray(data.items))) {
-      const sel = box.querySelector("select");
-      if (sel) sel.disabled = true;
-      if (!item.correct) {
-        const right = document.createElement("div");
-        right.className = "reading-opt is-key";
-        right.textContent = `Правильный ответ: ${item.expected + 1}. ${data.items.options[item.expected]}`;
-        box.appendChild(right);
-      }
-      const whyList = data.items && Array.isArray(data.items.why) ? data.items.why : null;
-      if (whyList && whyList[i]) box.appendChild(readingWhy("Почему", whyList[i]));
-      return;
-    }
-
-    box.querySelectorAll(".reading-opt").forEach((label, j) => {
-      const input = label.querySelector("input");
-      if (input) input.disabled = true;
-      if (j === item.expected) label.classList.add("is-key");
-      else if (j === item.chosen) label.classList.add("is-chosen-wrong");
-    });
-
-    // The explanation is the reason this screen exists. Show why their own choice
-    // failed FIRST — that is the question they are actually asking — then why the right
-    // answer is right. Older bank entries have no explanations; say nothing rather than
-    // showing an empty heading.
-    const source = (data.items && data.items[i]) || {};
-    if (!item.correct && item.chosen !== null && Array.isArray(source.whyNot) && source.whyNot[item.chosen]) {
-      box.appendChild(readingWhy("Почему ваш ответ не подходит", source.whyNot[item.chosen]));
-    }
-    if (source.why) box.appendChild(readingWhy("Почему верен правильный ответ", source.why));
-  });
-
-  const host = readingQs("readingResult");
-  host.innerHTML = "";
-  host.style.display = "";
-
-  const score = document.createElement("div");
-  score.className = "reading-score";
-  score.textContent = `${data.correct} / ${data.total}`;
-  const sub = document.createElement("div");
-  sub.className = "reading-score-sub";
-  sub.textContent = `${data.percent}% правильных ответов`;
-  host.appendChild(score);
-  host.appendChild(sub);
-
-  // Points only where the conversion is published; never a number we made up.
-  const points = document.createElement("p");
-  points.className = "access-note";
-  points.style.marginTop = ".5rem";
-  if (data.points) {
-    points.textContent = `Первичных баллов за это задание: ${data.points.earned} из ${data.points.max}.`;
-  } else {
-    points.textContent = data.pointsUnavailableReason
-      || "Для этого задания официальная шкала перевода в баллы не опубликована, поэтому показано только количество верных ответов.";
-  }
-  host.appendChild(points);
-
-  const band = document.createElement("p");
-  band.className = "access-note";
-  band.textContent = "Это тренировка одного раздела, а не весь экзамен, поэтому итоговый балл здесь не выставляется. "
-    + (data.bandUnavailableReason || "");
-  host.appendChild(band);
-
-  const again = document.createElement("button");
-  again.className = "secondary";
-  again.style.marginTop = ".75rem";
-  again.textContent = "Другой текст";
-  again.addEventListener("click", () => { readingQs("readingResult").style.display = "none"; startReading(); });
-  host.appendChild(again);
-
-  host.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-readingQs("readingStartBtn").addEventListener("click", startReading);
-readingQs("readingSubmitBtn").addEventListener("click", submitReading);
 
 // Protect existing Writing/Speaking input when navigation opens the new books.
 window.addEventListener("beforeunload", event => {

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Owner · Exam Prep</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* The owner's one link. Each tab is one of the existing pages in a frame, so students' own links
+   (index.html, practice.html#/exam/skill) are untouched and each page keeps its state while the
+   owner switches tabs. The admin key is asked for once here and kept for this browser tab only
+   (sessionStorage, the same place admin.html already keeps it); no frame exists until the Worker
+   has accepted the key. Tokens are DESIGN.md's. */
+:root{--paper:#F8FBFF;--grid:#D3E3F5;--desk:#E9EFF7;--ink:#1F36A8;--ink-pressed:#17297F;--text:#1B2233;--muted:#55607A;--margin-red:#C93B3B;--white:#FFFFFF;
+ --hand:Caveat,'Segoe Print','Comic Sans MS',cursive;--sans:'Golos Text','Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--desk);color:var(--text);font:400 1rem/1.5 var(--sans)}
+button,input{font:inherit}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+[hidden]{display:none!important}
+
+/* Gate: one sheet of squared paper with the margin line. */
+#gate{min-height:100%;display:grid;place-items:center;padding:20px 16px}
+.sheet{width:100%;max-width:440px;padding:28px 24px 28px 40px;border:1px solid var(--grid);border-radius:4px;position:relative;
+ background:repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 24px),repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 24px),var(--paper)}
+.sheet::before{content:"";position:absolute;top:0;bottom:0;left:23px;width:1px;background:var(--margin-red);opacity:.75}
+.sheet h1{font:700 clamp(2.1rem,7vw,3.2rem)/1.05 var(--hand);color:var(--ink);margin:0 0 4px;text-decoration:underline 3px;text-underline-offset:8px;text-decoration-skip-ink:none}
+.sheet p{margin:12px 0}
+.sheet label{display:block;font-weight:700;margin:20px 0 8px}
+.sheet input{width:100%;height:48px;padding:0 14px;border:1px solid #9cabc2;border-radius:6px;background:var(--white);color:var(--text)}
+.primary{height:48px;padding:0 22px;border:0;border-radius:6px;background:var(--ink);color:var(--white);font-weight:700;cursor:pointer}
+.primary:hover{background:var(--ink-pressed)}.primary:active{transform:translateY(1px)}.primary:disabled{opacity:.6;cursor:default}
+.sheet .primary{width:100%;margin-top:16px}
+#gateStatus{min-height:1.5em;color:var(--text);font-weight:700}
+.muted{color:var(--muted)}
+
+/* Hub: a top bar, then the open page filling the rest. Phone: tabs move to a bottom bar. */
+#hub{height:100%;display:flex;flex-direction:column}
+#bar{display:flex;align-items:center;gap:16px;padding:0 16px;min-height:56px;background:var(--paper);border-bottom:1px solid var(--grid)}
+.brand{font:700 1.7rem/1 var(--hand);color:var(--ink);white-space:nowrap}
+#tabs{display:flex;gap:4px;flex:1;min-width:0}
+.tab{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:0;border-radius:6px;background:none;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tab svg{width:20px;height:20px;flex:none}
+.tab:hover{background:rgba(31,54,168,.08);color:var(--ink)}
+.tab[aria-selected=true]{color:var(--ink);font-weight:700;box-shadow:inset 0 -3px 0 var(--ink);border-radius:6px 6px 0 0}
+.tools{display:flex;align-items:center;gap:8px;margin-left:auto}
+.tools a,.tools button{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;border-radius:6px;color:var(--ink);background:none;border:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.tools button{border:2px solid var(--ink);text-decoration:none;font-weight:700}
+#panels{flex:1;min-height:0;position:relative;background:var(--white)}
+#panels iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--white)}
+
+/* 900-1199px: the full labels and both tools do not fit on one bar; the short labels do. */
+@media (min-width:900px) and (max-width:1199px){.tab{padding:0 10px}.tab .long{display:none}#bar{gap:10px}}
+@media (max-width:899px){
+ #bar{gap:8px;padding:0 8px 0 16px}
+ #tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;height:60px;gap:0;background:var(--paper);border-top:1px solid var(--grid)}
+ .tab{flex:1;flex-direction:column;justify-content:center;gap:2px;padding:4px 2px;border-radius:0;font-size:.82rem;line-height:1.15;white-space:normal;text-align:center}
+ .tab svg{width:24px;height:24px}
+ .tab[aria-selected=true]{box-shadow:inset 0 3px 0 var(--ink);border-radius:0}
+ #panels{margin-bottom:60px}
+ .tools a{padding:0 8px}
+}
+@media (max-width:420px){.tab .long{display:none}.tools a{font-size:.82rem}}
+@media (prefers-reduced-motion:no-preference){#panels iframe{animation:turn .24s ease-out}@keyframes turn{from{opacity:0;transform:translateY(10px)}}}
+</style>
+</head>
+<body>
+<div id="gate">
+ <form class="sheet" id="gateForm">
+  <h1>Exam Prep</h1>
+  <p>The owner's page: the student pages, the roster and the content desk in one place.</p>
+  <label for="key">Admin key</label>
+  <input id="key" type="password" autocomplete="current-password" required>
+  <button class="primary" id="open" type="submit">Open</button>
+  <p id="gateStatus" role="status" aria-live="polite"></p>
+  <p class="muted">You are asked once. The key is kept until you close this browser tab or press Lock.</p>
+ </form>
+</div>
+<div id="hub" hidden>
+ <header id="bar">
+  <span class="brand">Exam Prep</span>
+  <nav id="tabs" role="tablist" aria-label="Pages"></nav>
+  <div class="tools"><a id="solo" target="_blank" rel="noopener">Open on its own</a><button id="lock" type="button">Lock</button></div>
+ </header>
+ <main id="panels"></main>
+</div>
+<script>
+const BACKEND_URL = "https://exam-scorer.kayuso2011.workers.dev";
+const KEY = "examPrepAdminKey";  // admin.html and content.html read the same entry
+const icon = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const PAGES = [
+  { id: "write", src: "index.html", label: "Writing <span class=long>&amp; Speaking</span>", name: "Writing and Speaking (student page)", admin: false,
+    icon: icon('<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13 7l4 4"/>') },
+  { id: "practice", src: "practice.html", label: "Reading <span class=long>&amp; Listening</span>", name: "Reading and Listening (student page)", admin: false,
+    icon: icon('<path d="M3 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H3z"/><path d="M21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z"/>') },
+  { id: "roster", src: "admin.html", label: "Roster", name: "Roster", admin: true,
+    icon: icon('<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5a3 3 0 0 1 0 6M21 20a6 6 0 0 0-4-5.6"/>') },
+  { id: "content", src: "content.html", label: "Content <span class=long>desk</span>", name: "Content desk", admin: true,
+    icon: icon('<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>') },
+];
+const $ = (id) => document.getElementById(id);
+const frames = new Map();
+let current = null;
+
+function stored() { try { return sessionStorage.getItem(KEY) || ""; } catch { return ""; } }
+function store(key) { try { key ? sessionStorage.setItem(KEY, key) : sessionStorage.removeItem(KEY); } catch {} }
+
+// The Worker is the only judge of the key. 401 means wrong; anything else means we could not tell.
+async function check(key) {
+  try {
+    const r = await fetch(BACKEND_URL + "/admin/students", { headers: { "X-Admin-Key": key } });
+    if (r.status === 401) return "wrong";
+    return r.ok ? "ok" : "error";
+  } catch { return "offline"; }
+}
+
+function buildTabs() {
+  $("tabs").replaceChildren();
+  for (const p of PAGES) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "tab"; b.id = "tab-" + p.id; b.dataset.page = p.id;
+    b.setAttribute("role", "tab"); b.setAttribute("aria-controls", "panel-" + p.id); b.setAttribute("aria-selected", "false"); b.tabIndex = -1;
+    b.innerHTML = p.icon + "<span>" + p.label + "</span>";
+    b.onclick = () => { location.hash = p.id; };
+    $("tabs").append(b);
+  }
+}
+
+// Roving focus: arrow keys move between tabs, Home and End jump, as a tab list should.
+$("tabs").addEventListener("keydown", (e) => {
+  const tabs = [...$("tabs").children], i = tabs.indexOf(document.activeElement);
+  if (i < 0) return;
+  const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  const t = tabs[(to + tabs.length) % tabs.length];
+  t.focus(); location.hash = t.dataset.page;
+});
+
+function show(id) {
+  const page = PAGES.find((p) => p.id === id) || PAGES.find((p) => p.id === "roster");
+  if (page.admin && !stored()) { lock("Enter the admin key again."); return; }
+  if (!frames.has(page.id)) {
+    const f = document.createElement("iframe");
+    f.id = "panel-" + page.id; f.src = page.src; f.title = page.name;
+    f.setAttribute("role", "tabpanel"); f.setAttribute("aria-labelledby", "tab-" + page.id);
+    $("panels").append(f); frames.set(page.id, f);
+  }
+  for (const [pid, f] of frames) f.hidden = pid !== page.id;
+  for (const t of $("tabs").children) {
+    const on = t.dataset.page === page.id;
+    t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1;
+  }
+  $("solo").href = page.src; $("solo").setAttribute("aria-label", "Open " + page.name + " on its own");
+  document.title = page.name.replace(/ \(student page\)$/, "") + " · Owner · Exam Prep";
+  current = page.id;
+}
+
+function openHub() {
+  $("gate").hidden = true; $("hub").hidden = false;
+  if (!$("tabs").children.length) buildTabs();
+  show(location.hash.slice(1));
+}
+
+// Locking removes every frame, so nothing an admin page showed stays in this tab.
+function lock(message) {
+  store("");
+  for (const f of frames.values()) f.remove();
+  frames.clear(); current = null;
+  $("hub").hidden = true; $("gate").hidden = false;
+  $("gateStatus").textContent = message || "";
+  $("key").value = ""; $("key").focus();
+  document.title = "Owner · Exam Prep";
+}
+
+$("gateForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const key = $("key").value.trim();
+  if (!key) return;
+  $("open").disabled = true; $("gateStatus").textContent = "Checking the key…";
+  const result = await check(key);
+  $("open").disabled = false;
+  if (result === "ok") { store(key); $("key").value = ""; $("gateStatus").textContent = ""; openHub(); return; }
+  $("gateStatus").textContent = result === "wrong" ? "That key did not work. Check it and try again."
+    : result === "offline" ? "Could not reach the server. Check the internet connection and try again."
+    : "The server answered with an error. Try again in a minute.";
+});
+$("lock").onclick = () => lock("Locked. Enter the admin key to open the pages again.");
+window.addEventListener("hashchange", () => { if (!$("hub").hidden) show(location.hash.slice(1)); });
+
+// A key kept from earlier in this tab is checked again before any page opens.
+(async () => {
+  const key = stored();
+  if (!key) { $("key").focus(); return; }
+  $("gateStatus").textContent = "Checking the saved key…";
+  const result = await check(key);
+  if (result === "ok") { $("gateStatus").textContent = ""; openHub(); }
+  else if (result === "wrong") lock("The saved key no longer works. Enter it again.");
+  else $("gateStatus").textContent = "Could not check the saved key. Enter it to try again.";
+})();
+</script>
+</body>
+</html>
