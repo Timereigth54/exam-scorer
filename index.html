@@ -417,6 +417,7 @@
           <button type="button" class="pill active" data-skill="writing">Writing</button>
           <button type="button" class="pill" data-skill="speaking">Speaking</button>
           <button type="button" class="pill" data-skill="reading">Reading</button>
+          <a href="practice.html">Reading &amp; Listening books</a>
         </div>
       </div>
       <div id="taskSelectWrap">
@@ -2760,6 +2761,12 @@ let readingState = null;   // { bankId, format, answers: [], items }
 function readingQs(id) { return document.getElementById(id); }
 
 async function loadReadingTasks() {
+  if (["ielts", "toefl", "fce", "cae", "cpe", "pet", "ket"].includes(examSelect.value)) {
+    readingQs("readingStartBtn").disabled = true;
+    readingQs("readingTaskSelect").innerHTML = "";
+    readingQs("readingNote").textContent = "Continue in the Reading & Listening books using the link above.";
+    window.location.assign("practice.html#/" + examSelect.value + "/reading"); return;
+  }
   const select = readingQs("readingTaskSelect");
   const note = readingQs("readingNote");
   select.innerHTML = "";
@@ -3064,6 +3071,13 @@ function renderReadingResult(data) {
 readingQs("readingStartBtn").addEventListener("click", startReading);
 readingQs("readingSubmitBtn").addEventListener("click", submitReading);
 
+// Protect existing Writing/Speaking input when navigation opens the new books.
+window.addEventListener("beforeunload", event => {
+  const resultVisible = document.getElementById("results").classList.contains("visible");
+  const ungradedWriting = document.getElementById("essayText").value.trim() && !resultVisible;
+  const ungradedRecording = speakingPhase === "recording" || (recordedBlob && ["review", "transcribed"].includes(speakingPhase) && !resultVisible);
+  if (ungradedWriting || ungradedRecording) { event.preventDefault(); event.returnValue = ""; }
+});
 </script>
 </body>
 </html>

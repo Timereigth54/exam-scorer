@@ -125,6 +125,7 @@
 
   <div id="app">
     <h1>Roster &amp; gradebook</h1>
+    <p><a href="content.html">Reading &amp; Listening content desk</a></p>
     <p class="sub">Create student codes and review submission history.</p>
 
     <div class="card">
@@ -177,6 +178,9 @@
         <div>
           <label for="bankExam">Exam</label>
           <select id="bankExam" class="bank-select">
+            <option value="ielts">IELTS Academic</option>
+            <option value="toefl">TOEFL iBT (2026)</option>
+            <option value="fce">B2 First</option><option value="cae">C1 Advanced</option><option value="cpe">C2 Proficiency</option><option value="pet">B1 Preliminary</option><option value="ket">A2 Key</option><option value="sat">SAT practice</option>
             <option value="ege">ЕГЭ (grade 11)</option>
             <option value="oge">ОГЭ (grade 9)</option>
           </select>
@@ -448,10 +452,34 @@ async function loadHistory(code, name) {
     document.getElementById("historyTitle").textContent = `${name} — ${code}`;
     renderHistoryProgress(data.submissions || []);
     renderHistoryList(data.submissions || []);
+    renderSectionHistory(data.sectionAttempts || []);
     document.getElementById("historyCard").classList.add("visible");
     document.getElementById("historyCard").scrollIntoView({ behavior: "smooth" });
   } catch (e) {
     alert("Couldn't reach the server to load history: " + e.message);
+  }
+}
+
+function renderSectionHistory(attempts) {
+  let host = document.getElementById("sectionHistory");
+  if (!host) { host = document.createElement("div"); host.id = "sectionHistory"; document.getElementById("historyProgress").after(host); }
+  host.innerHTML = "<h4>Reading &amp; Listening practice</h4>";
+  if (!attempts.length) { host.insertAdjacentHTML("beforeend", "<p>No section attempts yet.</p>"); return; }
+  for (const attempt of attempts) {
+    let record; try { record = JSON.parse(attempt.correct_json) || {}; } catch { record = {}; }
+    const snapshot = record.snapshot || {};
+    const details = document.createElement("details");
+    details.innerHTML = `<summary>${escapeHtml(EXAM_LABELS[attempt.exam_key] || attempt.exam_key)} · ${escapeHtml(attempt.skill)} · ${attempt.raw_score}/${attempt.max_points}${attempt.review_state === "pending" ? " · review pending" : ""}</summary><p>${escapeHtml(attempt.created_at)} · Practice result, not an official score.</p>`;
+    for (const item of record.perItem || []) {
+      const key = Array.isArray(snapshot.items) ? snapshot.items[item.index] : null;
+      const options = key?.options || snapshot.items?.options;
+      const chosen = Array.isArray(item.chosen) ? item.chosen.map(n => options?.[n] ?? `Option ${n+1}`).join(", ")
+        : Number.isInteger(item.chosen) ? options?.[item.chosen] ?? `Option ${item.chosen+1}` : item.chosen || "Blank";
+      const line = document.createElement("p");
+      line.textContent = `${item.index+1}. ${chosen} — ${item.correct ? "Right" : item.state === "pending" ? "Waiting for review" : "Not right"}`;
+      details.appendChild(line);
+    }
+    host.appendChild(details);
   }
 }
 
@@ -623,7 +651,7 @@ async function loadBankGroups() {
     ];
     row.innerHTML = parts.join("");
 
-    if (g.supported) {
+    if (g.generatable ?? g.supported) {
       const btn = document.createElement("button");
       btn.textContent = "Generate";
       btn.addEventListener("click", () => generateBankEntry(g.taskFrom, btn));
@@ -631,13 +659,14 @@ async function loadBankGroups() {
     } else {
       const note = document.createElement("div");
       note.className = "bg-soon";
-      note.textContent = "this task type isn't built yet";
+      note.textContent = "Import reviewed content through the content desk.";
       row.appendChild(note);
     }
     host.appendChild(row);
   }
 
   bankQs("bankSpecNote").textContent =
+    data.section.maxPrimary == null ? "Practice profiles chosen for this app. Correct-answer counts only; not a complete exam paper." :
     `${data.section.label} — tasks ${data.section.tasks[0]}–${data.section.tasks[1]}, ${data.section.maxPrimary} первичных баллов. Structure from the ФИПИ спецификация for ${data.section.specYear}.`;
 }
 
@@ -766,14 +795,14 @@ function renderBankEntry(entry, index) {
   if (entry.status !== "approved") {
     const approve = document.createElement("button");
     approve.textContent = "Approve for students";
-    approve.addEventListener("click", () => reviewBankEntry(entry.id, "approve", clean));
+    approve.addEventListener("click", () => reviewBankEntry(entry.id, "approve", clean, entry.reviewToken));
     actions.appendChild(approve);
   }
   if (entry.status !== "retired") {
     const retire = document.createElement("button");
     retire.className = "ghost";
     retire.textContent = entry.status === "approved" ? "Withdraw" : "Discard";
-    retire.addEventListener("click", () => reviewBankEntry(entry.id, "retire", true));
+    retire.addEventListener("click", () => reviewBankEntry(entry.id, "retire", true, entry.reviewToken));
     actions.appendChild(retire);
   }
   body.appendChild(actions);
@@ -811,6 +840,17 @@ function renderBankItems(entry, disputed) {
   const host = document.createElement("div");
   const items = entry.items;
 
+  if (["table", "multiselect"].includes(entry.format) && Array.isArray(items)) {
+    for (const [i,item] of items.entries()) {
+      const box = document.createElement("div"); box.className = "bank-item";
+      const answers = entry.format === "table" ? item.accepted.join(" / ") : item.answer.map(n=>item.options[n]).join(" / ");
+      box.innerHTML = `<div class="bi-q">${i+1}. ${escapeHtml(item.label || item.q)}</div><p>Accepted: ${escapeHtml(answers)}</p>`;
+      if (item.prefix) { const note = document.createElement("p"); note.textContent = `Visible prefix: ${item.prefix}; ${item.missingLetters} missing letters.`; box.appendChild(note); }
+      box.appendChild(bankWhy("Why",item.why)); host.appendChild(box);
+    }
+    const link = document.createElement("a"); link.href = "content.html"; link.textContent = "Review illustrations, audio and full JSON in the content desk"; host.appendChild(link);
+    return host;
+  }
   // Matching sets are one object; multiple-choice sets are an array. Both carry the key.
   if (items && !Array.isArray(items) && Array.isArray(items.options)) {
     const box = document.createElement("div");
@@ -869,17 +909,17 @@ function renderBankItems(entry, disputed) {
   return host;
 }
 
-async function reviewBankEntry(id, action, clean) {
+async function reviewBankEntry(id, action, clean, reviewToken) {
   if (action === "approve") {
     const warn = clean
-      ? "Approve this set? Students will start seeing it."
-      : "The checking model disagreed with at least one answer here. Approve anyway? Students will start seeing it.";
+      ? "Confirm that you have read every question and answer before approving this set."
+      : "This draft has not passed every answer check. Confirm that you have reviewed its text, questions, key and warnings before approval.";
     if (!confirm(warn)) return;
   } else if (!confirm("Remove this set? It will stop being served to students.")) {
     return;
   }
   const reason = action === "retire" ? (prompt("Why? (optional, for your own records)") || "") : undefined;
-  const data = await adminPost("/admin/bank/review", { id, action, reason });
+  const data = await adminPost("/admin/bank/review", { id, action, reason, reviewToken });
   if (!data) return;
   await loadBankQueue();
   loadBankGroups();
