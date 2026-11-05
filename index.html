@@ -417,7 +417,7 @@
           <button type="button" class="pill active" data-skill="writing">Writing</button>
           <button type="button" class="pill" data-skill="speaking">Speaking</button>
           <button type="button" class="pill" data-skill="reading">Reading</button>
-          <a href="practice.html">Reading &amp; Listening books</a>
+          <button type="button" class="pill" data-skill="listening">Listening</button>
         </div>
       </div>
       <div id="taskSelectWrap">
@@ -904,6 +904,9 @@ async function loadExams() {
 // for the others would hand a student the raw validation error from the Worker, in
 // English, in a Russian interface - which is exactly what it did before this existed.
 let sectionExams = ["ege", "oge"];
+// Exams that have a Reading section but no Listening one. The Worker's /exams reply does
+// not say which skills each exam has, so this is the one place the page states it.
+const noListeningExams = ["sat"];
 
 function syncReadingPill() {
   const pill = document.querySelector('[data-skill="reading"]');
@@ -912,6 +915,13 @@ function syncReadingPill() {
   pill.disabled = !supported;
   pill.classList.toggle("pill-disabled", !supported);
   pill.title = supported ? "" : "Для этого экзамена раздел «Чтение» пока не готов.";
+  const listenPill = document.querySelector('[data-skill="listening"]');
+  if (listenPill) {
+    const hasListening = supported && !noListeningExams.includes(examSelect.value);
+    listenPill.disabled = !hasListening;
+    listenPill.classList.toggle("pill-disabled", !hasListening);
+    listenPill.title = hasListening ? "" : "There is no Listening practice for this exam yet.";
+  }
   // Switching to an exam without reading while reading is open must not strand the
   // student on an empty pane.
   if (!supported && currentSkill === "reading") {
@@ -1020,6 +1030,12 @@ taskSelect.addEventListener("change", showTaskMeta);
 
 document.querySelectorAll(".pill").forEach(p => {
   p.addEventListener("click", () => {
+    // Reading and Listening live on the practice page, one place per skill; this page
+    // keeps Writing and Speaking.
+    if (p.dataset.skill === "reading" || p.dataset.skill === "listening") {
+      window.location.assign("practice.html#/" + examSelect.value + "/" + p.dataset.skill);
+      return;
+    }
     if (p.dataset.skill === currentSkill) return;
     document.querySelectorAll(".pill").forEach(x => x.classList.remove("active"));
     p.classList.add("active");
@@ -2764,7 +2780,7 @@ async function loadReadingTasks() {
   if (["ielts", "toefl", "fce", "cae", "cpe", "pet", "ket"].includes(examSelect.value)) {
     readingQs("readingStartBtn").disabled = true;
     readingQs("readingTaskSelect").innerHTML = "";
-    readingQs("readingNote").textContent = "Continue in the Reading & Listening books using the link above.";
+    readingQs("readingNote").textContent = "Opening Reading practice…";
     window.location.assign("practice.html#/" + examSelect.value + "/reading"); return;
   }
   const select = readingQs("readingTaskSelect");
