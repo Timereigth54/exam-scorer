@@ -56,8 +56,9 @@
           <option value="">Choose your level</option>
         </select>
       </label>
-      <label>Number of questions (1 to 20) <input id="count" type="number" min="1" max="20" step="1" value="10" required></label>
+      <label>Number of questions <input id="count" type="number" min="1" max="20" step="1" value="10" required aria-describedby="count-hint"></label>
     </div>
+    <p id="count-hint" class="hint">Up to 20 questions.</p>
     <fieldset>
       <legend>Grammar topics</legend>
       <div id="topics" class="topics"></div>
@@ -105,6 +106,8 @@ let active = null;
 let answers = [];
 let currentIndex = 0;
 let busy = false;
+let startingLimit = 20;
+let limitRequest = 0;
 
 function status(message = "", error = false) {
   $("status").textContent = message;
@@ -141,6 +144,7 @@ async function loadTopics() {
   try {
     const { topics, levels, difficulties: labels, maxCount } = await api("/grammar/topics");
     difficulties = labels;
+    startingLimit = maxCount;
     $("count").max = maxCount;
     let savedLevel = "";
     try { savedLevel = localStorage.getItem(LEVEL_KEY) || ""; } catch (_) {}
@@ -170,6 +174,34 @@ async function loadTopics() {
     $("reload-topics").hidden = false;
     status("Couldn't load grammar topics. Try reloading them.", true);
   }
+}
+
+function chosenTopics() {
+  return [...$("topics").querySelectorAll("input:checked")].map((input) => input.value);
+}
+
+// How many questions the student may ask for grows with the ones they have had at this
+// level in these topics. Until that is known, or if it can't be read, it is the first 20;
+// the Worker checks the number again when the set starts.
+async function updateLimit() {
+  const request = ++limitRequest;
+  const studentCode = $("student-code").value.trim();
+  const level = $("level").value;
+  const topics = chosenTopics();
+  let limit = startingLimit;
+  let hint = "Up to " + limit + " questions.";
+  if (studentCode && level && topics.length) {
+    try {
+      const result = await api("/grammar/limit", { studentCode, level, topics });
+      limit = result.limit;
+      hint = result.had === 0
+        ? "Up to " + limit + " questions."
+        : "Up to " + limit + " questions: at most " + result.maxNew + " new, mixed with the " + result.had + " you have had in these topics.";
+    } catch (_) {}
+  }
+  if (request !== limitRequest) return;
+  $("count").max = limit;
+  $("count-hint").textContent = hint;
 }
 
 function updateAnswered() {
@@ -270,6 +302,7 @@ async function redo(studentCode, attemptId, button) {
 try { $("student-code").value = localStorage.getItem(STORAGE_KEY) || ""; } catch (_) {}
 showLastSetButton();
 $("student-code").addEventListener("input", showLastSetButton);
+for (const id of ["student-code", "level", "topics"]) $(id).addEventListener("change", updateLimit);
 $("redo-last").addEventListener("click", () => {
   const saved = lastSet();
   return saved && redo(saved.studentCode, saved.attemptId, $("redo-last"));
@@ -279,7 +312,7 @@ $("reload-topics").addEventListener("click", loadTopics);
 $("setup").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (busy) return;
-  const topics = [...$("topics").querySelectorAll("input:checked")].map((input) => input.value);
+  const topics = chosenTopics();
   const count = $("count").valueAsNumber;
   const level = $("level").value;
   if (!level) { status("Choose your level.", true); return; }
@@ -330,6 +363,7 @@ $("again").addEventListener("click", () => {
   $("setup").hidden = false;
   showLastSetButton();
   $("start").focus();
+  return updateLimit();
 });
 loadTopics();
 </script>
