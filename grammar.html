@@ -27,6 +27,13 @@
     .grammar-page .topics label, .grammar-page .choices label { box-sizing: border-box; display: flex; align-items: center; gap: .75rem; min-height: 46px; border: 1px solid var(--ui-control); border-radius: .55rem; padding: .45rem .7rem; cursor: pointer; overflow-wrap: anywhere; }
     .grammar-page :is(.topics, .choices) label:has(input:checked) { background: var(--ui-tint); border-color: var(--ui-accent); box-shadow: inset 0 0 0 1px var(--ui-accent); }
     .grammar-page .choices { display: grid; gap: .65rem; }
+    .grammar-page #topics-hint { margin-top: .85rem; }
+    .grammar-page #topics:not([hidden]) { display: grid; gap: .65rem; }
+    .grammar-page #topics details { border: 1px solid var(--ui-border); border-radius: .55rem; padding: 0 .85rem; }
+    .grammar-page #topics details[open] { padding-bottom: .85rem; }
+    .grammar-page #topics summary { padding: .65rem 0; line-height: 1.6; cursor: pointer; font-weight: 700; }
+    .grammar-page #topics summary span { margin-inline-start: .6rem; font-weight: 400; white-space: nowrap; }
+    .grammar-page #topics button { margin-bottom: .65rem; }
     .grammar-page .actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
     .grammar-page .actions > .primary { margin-inline-start: auto; }
     .grammar-page progress { accent-color: var(--ui-accent); width: 100%; height: .75rem; }
@@ -45,7 +52,7 @@
   <nav aria-label="Exam Prep"><a href="index.html">← Exam Prep</a></nav>
   <header>
     <h1>Grammar practice</h1>
-    <p class="hint">Choose your level, the topics and how many questions you want. Each set starts easy and gets harder.</p>
+    <p class="hint">Choose your level, how many questions you want and the topics. Each set starts easy and gets harder.</p>
   </header>
   <p id="status" role="status" aria-live="polite"></p>
   <form id="setup" class="card">
@@ -61,7 +68,9 @@
     <p id="count-hint" class="hint">Up to 20 questions.</p>
     <fieldset>
       <legend>Grammar topics</legend>
-      <div id="topics" class="topics"></div>
+      <div class="topics"><label><input id="mix-all" type="checkbox"> Mix all the topics at my level</label></div>
+      <p id="topics-hint" class="hint">Choose your level to see its topics.</p>
+      <div id="topics"></div>
     </fieldset>
     <div class="actions">
       <button type="button" id="reload-topics" hidden>Reload topics</button>
@@ -101,6 +110,7 @@ const LEVEL_KEY = "examPrepGrammarLevel";
 const LAST_SET_KEY = "examPrepGrammarLastSet";
 const levelNames = new Map();
 const topicNames = new Map();
+let allTopics = [];
 let difficulties = [];
 let active = null;
 let answers = [];
@@ -142,7 +152,7 @@ async function loadTopics() {
   $("start").disabled = true;
   status("Loading topics…");
   try {
-    const { topics, levels, difficulties: labels, maxCount } = await api("/grammar/topics");
+    const { topics, oldTopics, levels, difficulties: labels, maxCount } = await api("/grammar/topics");
     difficulties = labels;
     startingLimit = maxCount;
     $("count").max = maxCount;
@@ -159,15 +169,9 @@ async function loadTopics() {
       return option;
     }));
     if (levelNames.has(savedLevel)) $("level").value = savedLevel;
-    $("topics").replaceChildren(...topics.map(({ id, label }) => {
-      topicNames.set(id, label);
-      const wrapper = document.createElement("label");
-      const input = document.createElement("input");
-      input.type = "checkbox";
-      input.value = id;
-      wrapper.append(input, document.createTextNode(label));
-      return wrapper;
-    }));
+    allTopics = topics;
+    for (const { id, label } of [...topics, ...oldTopics]) topicNames.set(id, label);
+    showTopics();
     $("start").disabled = false;
     status();
   } catch (_) {
@@ -176,8 +180,72 @@ async function loadTopics() {
   }
 }
 
-function chosenTopics() {
+// One group of topics: a heading that opens, how many are chosen, and one button that
+// chooses or clears them all.
+function topicGroup(name, topics, chosen) {
+  const details = document.createElement("details");
+  const summary = document.createElement("summary");
+  const tally = document.createElement("span");
+  const all = document.createElement("button");
+  const list = document.createElement("div");
+  list.className = "topics";
+  const inputs = topics.map(({ id }) => {
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.value = id;
+    input.checked = chosen.has(id);
+    return input;
+  });
+  const update = () => {
+    const n = inputs.filter((input) => input.checked).length;
+    tally.textContent = n ? n + " of " + inputs.length + " chosen" : inputs.length + (inputs.length === 1 ? " topic" : " topics");
+    all.textContent = n === inputs.length ? "Clear all" : "Choose all";
+    return n;
+  };
+  list.append(...inputs.map((input, index) => {
+    const label = document.createElement("label");
+    label.append(input, document.createTextNode(topics[index].label));
+    return label;
+  }));
+  list.addEventListener("change", update);
+  all.type = "button";
+  all.addEventListener("click", () => {
+    const choose = inputs.some((input) => !input.checked);
+    for (const input of inputs) input.checked = choose;
+    update();
+    return updateLimit();
+  });
+  summary.append(document.createTextNode(name), tally);
+  details.append(summary, all, list);
+  details.open = update() > 0;
+  return details;
+}
+
+// Only the topics of the chosen level. What was chosen stays chosen if the new level has it.
+function showTopics() {
+  const chosen = new Set(listedChoices());
+  const groups = new Map();
+  for (const topic of levelTopics()) {
+    if (!groups.has(topic.group)) groups.set(topic.group, []);
+    groups.get(topic.group).push(topic);
+  }
+  $("topics").replaceChildren(...[...groups].map(([name, topics]) => topicGroup(name, topics, chosen)));
+  $("topics").hidden = $("mix-all").checked;
+  $("topics-hint").textContent = !groups.size ? "Choose your level to see its topics."
+    : $("mix-all").checked ? "Each set takes its topics at random from all " + levelTopics().length + " at your level."
+    : "Open a group and choose one or more topics. If you choose more topics than questions, the set takes some of them at random.";
+}
+
+function levelTopics() {
+  return allTopics.filter(({ levels }) => levels.includes($("level").value));
+}
+
+function listedChoices() {
   return [...$("topics").querySelectorAll("input:checked")].map((input) => input.value);
+}
+
+function chosenTopics() {
+  return $("mix-all").checked ? levelTopics().map(({ id }) => id) : listedChoices();
 }
 
 // How many questions the student may ask for grows with the ones they have had at this
@@ -302,7 +370,8 @@ async function redo(studentCode, attemptId, button) {
 try { $("student-code").value = localStorage.getItem(STORAGE_KEY) || ""; } catch (_) {}
 showLastSetButton();
 $("student-code").addEventListener("input", showLastSetButton);
-for (const id of ["student-code", "level", "topics"]) $(id).addEventListener("change", updateLimit);
+for (const id of ["student-code", "topics"]) $(id).addEventListener("change", updateLimit);
+for (const id of ["level", "mix-all"]) $(id).addEventListener("change", () => { showTopics(); return updateLimit(); });
 $("redo-last").addEventListener("click", () => {
   const saved = lastSet();
   return saved && redo(saved.studentCode, saved.attemptId, $("redo-last"));
@@ -317,8 +386,7 @@ $("setup").addEventListener("submit", async (event) => {
   const level = $("level").value;
   if (!level) { status("Choose your level.", true); return; }
   if (!Number.isInteger(count) || count < 1 || count > Number($("count").max)) { status("Choose from 1 to " + $("count").max + " questions.", true); return; }
-  if (!topics.length) { status("Choose at least one topic.", true); return; }
-  if (topics.length > count) { status("Choose at least one question per selected topic.", true); return; }
+  if (!topics.length) { status("Choose at least one topic, or mix all the topics at your level.", true); return; }
   const studentCode = $("student-code").value.trim();
   if (!studentCode) { status("Enter your student code.", true); return; }
   try { localStorage.setItem(STORAGE_KEY, studentCode); localStorage.setItem(LEVEL_KEY, level); } catch (_) {}
