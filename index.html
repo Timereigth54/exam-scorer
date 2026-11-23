@@ -166,6 +166,7 @@
   .crit-feedback-item .cf-weakness{color:var(--mark-red);}
   .crit-feedback-item .cf-improve{color:var(--ink);font-weight:600;}
 
+  .backup-note{border-radius:8px;padding:.6rem .75rem;margin-top:.75rem;font-size:.88rem;background:var(--seal-gold-bg);color:var(--ink);}
   .disclaimer{font-size:.78rem;color:var(--ink-faint);text-align:center;margin-top:.5rem;}
   footer.note{text-align:center;font-size:.78rem;color:var(--ink-faint);margin-top:2rem;}
   .link-btn{
@@ -542,6 +543,7 @@
       </div>
     </div>
     <div id="criteriaList"></div>
+    <p class="backup-note" id="backupNote" hidden>The backup examiner marked this answer. Its scores have not been compared with a teacher's marks yet, so take the score as a rough guide.</p>
     <p class="disclaimer" id="disclaimer"></p>
     <div class="feedback-block" id="criteriaFeedbackBlock" style="display:none">
       <h4>How You Did, Criterion by Criterion</h4>
@@ -2536,6 +2538,8 @@ function renderResults(data, originalText, usedPrompt) {
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>`;
     list.appendChild(row);
   });
+
+  document.getElementById("backupNote").hidden = !data.degraded;
 
   // Both notes are fixed strings chosen by exam/skill — no interpolated model output.
   const disclaimerParts = [];
