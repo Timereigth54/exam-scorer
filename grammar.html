@@ -13,7 +13,6 @@
     .grammar-page nav a { display: inline-flex; align-items: center; min-height: 44px; }
     .grammar-page header { margin: 1rem 0 1.5rem; }
     .grammar-page h1, .grammar-page h2 { margin: 0 0 .55rem; }
-    .grammar-page h3 { margin: .25rem 0; }
     .grammar-page p { margin: 0 0 .85rem; }
     .grammar-page .card { border: 1px solid var(--ui-border); background: var(--ui-paper); border-radius: var(--ui-radius); padding: clamp(1rem, 4vw, 2rem); }
     .grammar-page .fields, .grammar-page .topics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: .65rem; }
@@ -40,11 +39,24 @@
     .grammar-page #status { margin: .8rem 0; }
     .grammar-page #status:empty { display: none; }
     .grammar-page #status[data-error] { color: var(--ui-danger); }
-    .grammar-page #review { padding-inline-start: 1.4rem; }
-    .grammar-page #review li { padding: .75rem 0; border-top: 1px solid var(--ui-border); }
-    .grammar-page #review li p { margin: 0; overflow-wrap: anywhere; }
-    .grammar-page .result-correct { color: #1d6344; }
-    .grammar-page .result-missed { color: var(--ui-danger); }
+    .grammar-page #review { list-style: none; counter-reset: item; margin: 1rem 0 1.5rem; padding: 0; display: grid; gap: 1rem; }
+    .grammar-page #review > li { counter-increment: item; border: 1px solid var(--ui-border); border-radius: .75rem; overflow: hidden; }
+    .grammar-page #review .verdict { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .75rem; margin: 0; padding: .55rem .9rem; }
+    .grammar-page #review .verdict::before { content: counter(item) "."; font-weight: 700; }
+    .grammar-page #review .badge { border-radius: 99px; padding: .1rem .75rem; color: #fff; font-weight: 700; }
+    .grammar-page #review .correct .verdict { background: #e4f3ea; }
+    .grammar-page #review .correct .badge { background: #1d6344; }
+    .grammar-page #review .missed .verdict { background: #fbe9e6; }
+    .grammar-page #review .missed .badge { background: var(--ui-danger); }
+    .grammar-page #review .blank .verdict { background: #fbf1de; }
+    .grammar-page #review .blank .badge { background: var(--ui-warn); }
+    .grammar-page #review .body { padding: .8rem .9rem 1rem; display: grid; gap: .55rem; }
+    .grammar-page #review :is(h3, .body p) { margin: 0; overflow-wrap: anywhere; }
+    .grammar-page #review h3 { font: 500 1.1rem/1.55 var(--ui-sans); }
+    .grammar-page #review h3 strong, .grammar-page #review .right { color: #1d6344; font-weight: 700; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .22em; }
+    .grammar-page #review s { color: var(--ui-danger); text-decoration-thickness: 2px; }
+    .grammar-page #review .rule { border-radius: .55rem; background: var(--ui-tint); padding: .6rem .8rem; }
+    .grammar-page #review em { font-weight: 600; }
   </style>
 </head>
 <body class="exam-ui grammar-page">
@@ -282,6 +294,8 @@ function showQuestion() {
   $("progress").max = answers.length;
   $("progress").value = currentIndex + 1;
   $("question-topic").textContent = topicNames.get(topic) + " · " + active.level + " · " + difficulties[difficulty - 1];
+  const gaps = question.split("____").length - 1;
+  if (gaps > 1) $("question-topic").textContent += " · " + gaps + " gaps, filled in order";
   $("question").textContent = question;
   $("choices").replaceChildren(...options.map((option, index) => {
     const label = document.createElement("label");
@@ -303,30 +317,63 @@ function showQuestion() {
   $("question").focus();
 }
 
+// An element with its children, which may be plain text.
+function make(tag, className, ...children) {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  element.append(...children.map((child) => typeof child === "string" ? document.createTextNode(child) : child));
+  return element;
+}
+
+// Explanations quote the words they talk about. Those words are shown in italics.
+function withItalics(text) {
+  const parts = [];
+  let from = 0;
+  for (const match of text.matchAll(/(^|[\s(/])['"‘“](.+?)['"’”](?=$|[\s.,;:!?)/])/g)) {
+    const start = match.index + match[1].length;
+    parts.push(text.slice(from, start), make("em", "", match[2]));
+    from = match.index + match[0].length;
+  }
+  parts.push(text.slice(from));
+  return parts.filter((part) => part !== "");
+}
+
+// The words of an option for each gap of its question.
+function gapWords(question, option) {
+  return question.split("____").length === 2 ? [option] : option.split(" / ");
+}
+
+// A wrong answer with the words that are wrong crossed out. In a question with several gaps
+// some of its words are right.
+function crossedOut(question, chosen, right) {
+  const rightWords = gapWords(question, right);
+  return gapWords(question, chosen).flatMap((words, index) =>
+    [...(index ? [" / "] : []), words === rightWords[index] ? words : make("s", "", words)]);
+}
+
+// The sentence with the right words in its gaps, so it can be read whole.
+function filledSentence(question, option) {
+  const words = gapWords(question, option);
+  return question.split("____").flatMap((text, index) => index === 0 ? [text] : [make("strong", "", words[index - 1]), text]).filter((part) => part !== "");
+}
+
 function showResult(result) {
   $("exercise").hidden = true;
   $("results").hidden = false;
   $("score").textContent = result.correct + " of " + result.total + " correct";
   $("review").replaceChildren(...result.items.map((item, index) => {
     const question = active.questions[index];
-    const line = document.createElement("li");
-    const heading = document.createElement("h3");
-    heading.textContent = question.question;
-    const mark = document.createElement("strong");
-    mark.className = item.correct ? "result-correct" : "result-missed";
-    mark.textContent = item.correct ? "Correct" : item.selected === null ? "Unanswered" : "Incorrect";
-    const choice = document.createElement("p");
-    choice.textContent = "Your answer: " + (question.options[item.selected] ?? "—") + " · Correct answer: " + question.options[item.answer];
-    const explanation = document.createElement("p");
-    explanation.textContent = item.explanation;
-    line.append(heading, mark, choice);
-    if (item.note) {
-      const note = document.createElement("p");
-      note.textContent = "Why not “" + question.options[item.selected] + "”? " + item.note;
-      line.append(note);
-    }
-    line.append(explanation);
-    return line;
+    const chosen = question.options[item.selected];
+    const right = question.options[item.answer];
+    const [kind, verdict] = item.correct ? ["correct", "✓ Correct"] : item.selected === null ? ["blank", "– Not answered"] : ["missed", "✗ Incorrect"];
+    const body = make("div", "body", make("h3", "", ...filledSentence(question.question, right)));
+    if (kind === "missed") body.append(make("p", "", make("strong", "", "Your answer: "), ...crossedOut(question.question, chosen, right)));
+    if (kind !== "correct") body.append(make("p", "", make("strong", "", "Correct answer: "), make("span", "right", right)));
+    if (item.note) body.append(make("p", "", make("strong", "", "Why not ", make("em", "", chosen), "? "), ...withItalics(item.note)));
+    body.append(make("p", "rule", make("strong", "", "The rule: "), ...withItalics(item.explanation)));
+    return make("li", kind,
+      make("p", "verdict", make("span", "badge", verdict), make("span", "hint", topicNames.get(question.topic) + " · " + difficulties[question.difficulty - 1])),
+      body);
   }));
   $("score").focus();
 }
