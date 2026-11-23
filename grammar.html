@@ -118,8 +118,20 @@ async function api(path, body) {
     body: JSON.stringify(body),
   } : {});
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || ("Request failed (" + response.status + ")."));
+  if (!response.ok) throw Object.assign(new Error(data.error || ("Request failed (" + response.status + ").")), { status: response.status });
   return data;
+}
+
+// A set the Worker could not finish (502) keeps every question that passed the
+// answer check, so one automatic second request usually completes it.
+async function startSet(body) {
+  try {
+    return await api("/grammar/start", body);
+  } catch (error) {
+    if (error.status !== 502) throw error;
+    status("Still preparing your questions…");
+    return api("/grammar/start", body);
+  }
 }
 
 async function loadTopics() {
@@ -275,7 +287,7 @@ $("setup").addEventListener("submit", async (event) => {
   $("start").disabled = true;
   status("Preparing your questions. A new set can take a minute.");
   try {
-    begin(await api("/grammar/start", { studentCode, level, topics, count }), studentCode);
+    begin(await startSet({ studentCode, level, topics, count }), studentCode);
   } catch (error) {
     status(error.message || "Couldn't start practice. Try again.", true);
   } finally {
