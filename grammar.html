@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grammar Practice · Exam Prep</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="ui.css">
+  <style>
+    .grammar-page { margin: 0; padding: clamp(1rem, 4vw, 3rem); }
+    .grammar-page main { max-width: 52rem; margin-inline: auto; }
+    .grammar-page nav a { display: inline-flex; align-items: center; min-height: 44px; }
+    .grammar-page header { margin: 1rem 0 1.5rem; }
+    .grammar-page h1, .grammar-page h2 { margin: 0 0 .55rem; }
+    .grammar-page h3 { margin: .25rem 0; }
+    .grammar-page p { margin: 0 0 .85rem; }
+    .grammar-page .card { border: 1px solid var(--ui-border); background: var(--ui-paper); border-radius: var(--ui-radius); padding: clamp(1rem, 4vw, 2rem); }
+    .grammar-page .fields, .grammar-page .topics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: .65rem; }
+    .grammar-page .fields > label { display: grid; align-content: start; gap: .3rem; font-weight: 700; }
+    .grammar-page .fields :is(input, select), .grammar-page button { box-sizing: border-box; border: 1px solid var(--ui-control); border-radius: .55rem; padding: .55rem .85rem; font: inherit; }
+    .grammar-page button { color: var(--ui-ink); background: var(--ui-paper); cursor: pointer; font-weight: 700; }
+    .grammar-page button:disabled { opacity: .55; }
+    .grammar-page button.primary { border-color: var(--ui-accent); }
+    .grammar-page fieldset { border: 0; padding: 0; margin: 1.25rem 0; min-width: 0; }
+    .grammar-page legend { font-weight: 700; padding: 0; margin-bottom: .65rem; }
+    .grammar-page .topics label, .grammar-page .choices label { box-sizing: border-box; display: flex; align-items: center; gap: .75rem; min-height: 46px; border: 1px solid var(--ui-control); border-radius: .55rem; padding: .45rem .7rem; cursor: pointer; overflow-wrap: anywhere; }
+    .grammar-page :is(.topics, .choices) label:has(input:checked) { background: var(--ui-tint); border-color: var(--ui-accent); box-shadow: inset 0 0 0 1px var(--ui-accent); }
+    .grammar-page .choices { display: grid; gap: .65rem; }
+    .grammar-page .actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+    .grammar-page .actions > .primary { margin-inline-start: auto; }
+    .grammar-page progress { accent-color: var(--ui-accent); width: 100%; height: .75rem; }
+    .grammar-page #status { margin: .8rem 0; }
+    .grammar-page #status:empty { display: none; }
+    .grammar-page #status[data-error] { color: var(--ui-danger); }
+    .grammar-page #review { padding-inline-start: 1.4rem; }
+    .grammar-page #review li { padding: .75rem 0; border-top: 1px solid var(--ui-border); }
+    .grammar-page #review li p { margin: 0; overflow-wrap: anywhere; }
+    .grammar-page .result-correct { color: #1d6344; }
+    .grammar-page .result-missed { color: var(--ui-danger); }
+  </style>
+</head>
+<body class="exam-ui grammar-page">
+<main>
+  <nav aria-label="Exam Prep"><a href="index.html">← Exam Prep</a></nav>
+  <header>
+    <h1>Grammar practice</h1>
+    <p class="hint">Choose your level, the topics and how many questions you want. Each set starts easy and gets harder.</p>
+  </header>
+  <p id="status" role="status" aria-live="polite"></p>
+  <form id="setup" class="card">
+    <div class="fields">
+      <label>Your code <input id="student-code" placeholder="e.g. FX7-K2N" autocomplete="off" required></label>
+      <label>Your level
+        <select id="level" required>
+          <option value="">Choose your level</option>
+        </select>
+      </label>
+      <label>Number of questions (1 to 20) <input id="count" type="number" min="1" max="20" step="1" value="10" required></label>
+    </div>
+    <fieldset>
+      <legend>Grammar topics</legend>
+      <div id="topics" class="topics"></div>
+    </fieldset>
+    <div class="actions">
+      <button type="button" id="reload-topics" hidden>Reload topics</button>
+      <button type="button" id="redo-last" hidden>Redo your last set</button>
+      <button class="primary" id="start" disabled>Start practice</button>
+    </div>
+  </form>
+  <section id="exercise" class="card" hidden>
+    <p id="progress-label" class="hint"></p>
+    <progress id="progress" aria-labelledby="progress-label"></progress>
+    <p id="question-topic" class="hint"></p>
+    <h2 id="question" tabindex="-1"></h2>
+    <fieldset aria-labelledby="question">
+      <div id="choices" class="choices"></div>
+    </fieldset>
+    <div class="actions">
+      <button type="button" id="previous">Previous</button>
+      <button type="button" id="next" class="primary">Next</button>
+      <button type="button" id="submit" class="primary" hidden>Check answers</button>
+    </div>
+    <p id="answered" class="hint"></p>
+  </section>
+  <section id="results" class="card" hidden>
+    <h2 id="score" tabindex="-1"></h2>
+    <ol id="review"></ol>
+    <div class="actions">
+      <button type="button" id="redo">Try the same set again</button>
+      <button type="button" class="primary" id="again">New practice set</button>
+    </div>
+  </section>
+</main>
+<script>
+const BACKEND_URL = "https://exam-scorer.kayuso2011.workers.dev";
+const $ = (id) => document.getElementById(id);
+const STORAGE_KEY = "examPrepStudentCode";
+const LEVEL_KEY = "examPrepGrammarLevel";
+const LAST_SET_KEY = "examPrepGrammarLastSet";
+const levelNames = new Map();
+const topicNames = new Map();
+let difficulties = [];
+let active = null;
+let answers = [];
+let currentIndex = 0;
+let busy = false;
+
+function status(message = "", error = false) {
+  $("status").textContent = message;
+  $("status").toggleAttribute("data-error", error);
+}
+
+async function api(path, body) {
+  const response = await fetch(BACKEND_URL + path, body ? {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  } : {});
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || ("Request failed (" + response.status + ")."));
+  return data;
+}
+
+async function loadTopics() {
+  $("reload-topics").hidden = true;
+  $("start").disabled = true;
+  status("Loading topics…");
+  try {
+    const { topics, levels, difficulties: labels, maxCount } = await api("/grammar/topics");
+    difficulties = labels;
+    $("count").max = maxCount;
+    let savedLevel = "";
+    try { savedLevel = localStorage.getItem(LEVEL_KEY) || ""; } catch (_) {}
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Choose your level";
+    $("level").replaceChildren(placeholder, ...levels.map(({ id, label }) => {
+      levelNames.set(id, label);
+      const option = document.createElement("option");
+      option.value = id;
+      option.textContent = label;
+      return option;
+    }));
+    if (levelNames.has(savedLevel)) $("level").value = savedLevel;
+    $("topics").replaceChildren(...topics.map(({ id, label }) => {
+      topicNames.set(id, label);
+      const wrapper = document.createElement("label");
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.value = id;
+      wrapper.append(input, document.createTextNode(label));
+      return wrapper;
+    }));
+    $("start").disabled = false;
+    status();
+  } catch (_) {
+    $("reload-topics").hidden = false;
+    status("Couldn't load grammar topics. Try reloading them.", true);
+  }
+}
+
+function updateAnswered() {
+  $("answered").textContent = answers.filter((answer) => answer !== null).length + " of " + answers.length + " answered";
+}
+
+function showQuestion() {
+  const { topic, difficulty, question, options } = active.questions[currentIndex];
+  $("progress-label").textContent = "Question " + (currentIndex + 1) + " of " + answers.length;
+  $("progress").max = answers.length;
+  $("progress").value = currentIndex + 1;
+  $("question-topic").textContent = topicNames.get(topic) + " · " + active.level + " · " + difficulties[difficulty - 1];
+  $("question").textContent = question;
+  $("choices").replaceChildren(...options.map((option, index) => {
+    const label = document.createElement("label");
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "answer";
+    input.checked = answers[currentIndex] === index;
+    input.addEventListener("change", () => {
+      answers[currentIndex] = index;
+      updateAnswered();
+    });
+    label.append(input, document.createTextNode(option));
+    return label;
+  }));
+  $("previous").disabled = currentIndex === 0;
+  $("next").hidden = currentIndex === answers.length - 1;
+  $("submit").hidden = currentIndex !== answers.length - 1;
+  updateAnswered();
+  $("question").focus();
+}
+
+function showResult(result) {
+  $("exercise").hidden = true;
+  $("results").hidden = false;
+  $("score").textContent = result.correct + " of " + result.total + " correct";
+  $("review").replaceChildren(...result.items.map((item, index) => {
+    const question = active.questions[index];
+    const line = document.createElement("li");
+    const heading = document.createElement("h3");
+    heading.textContent = question.question;
+    const mark = document.createElement("strong");
+    mark.className = item.correct ? "result-correct" : "result-missed";
+    mark.textContent = item.correct ? "Correct" : item.selected === null ? "Unanswered" : "Incorrect";
+    const choice = document.createElement("p");
+    choice.textContent = "Your answer: " + (question.options[item.selected] ?? "—") + " · Correct answer: " + question.options[item.answer];
+    const explanation = document.createElement("p");
+    explanation.textContent = item.explanation;
+    line.append(heading, mark, choice, explanation);
+    return line;
+  }));
+  $("score").focus();
+}
+
+function lastSet() {
+  try { return JSON.parse(localStorage.getItem(LAST_SET_KEY) || "null"); } catch (_) { return null; }
+}
+
+function showLastSetButton() {
+  const saved = lastSet();
+  $("redo-last").hidden = !(saved && saved.attemptId && saved.studentCode === $("student-code").value.trim());
+}
+
+function begin(started, studentCode) {
+  active = { ...started, studentCode };
+  try { localStorage.setItem(LAST_SET_KEY, JSON.stringify({ studentCode, attemptId: active.attemptId })); } catch (_) {}
+  answers = Array(active.questions.length).fill(null);
+  currentIndex = 0;
+  $("setup").hidden = true;
+  $("results").hidden = true;
+  $("exercise").hidden = false;
+  status();
+  showQuestion();
+}
+
+async function redo(studentCode, attemptId, button) {
+  if (busy) return;
+  busy = true;
+  button.disabled = true;
+  status("Preparing the same questions again…");
+  try {
+    begin(await api("/grammar/redo", { studentCode, attemptId }), studentCode);
+  } catch (error) {
+    status(error.message || "Couldn't open that set again. Try again.", true);
+  } finally {
+    busy = false;
+    button.disabled = false;
+  }
+}
+
+try { $("student-code").value = localStorage.getItem(STORAGE_KEY) || ""; } catch (_) {}
+showLastSetButton();
+$("student-code").addEventListener("input", showLastSetButton);
+$("redo-last").addEventListener("click", () => {
+  const saved = lastSet();
+  return saved && redo(saved.studentCode, saved.attemptId, $("redo-last"));
+});
+$("redo").addEventListener("click", () => active && redo(active.studentCode, active.attemptId, $("redo")));
+$("reload-topics").addEventListener("click", loadTopics);
+$("setup").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (busy) return;
+  const topics = [...$("topics").querySelectorAll("input:checked")].map((input) => input.value);
+  const count = $("count").valueAsNumber;
+  const level = $("level").value;
+  if (!level) { status("Choose your level.", true); return; }
+  if (!Number.isInteger(count) || count < 1 || count > Number($("count").max)) { status("Choose from 1 to " + $("count").max + " questions.", true); return; }
+  if (!topics.length) { status("Choose at least one topic.", true); return; }
+  if (topics.length > count) { status("Choose at least one question per selected topic.", true); return; }
+  const studentCode = $("student-code").value.trim();
+  if (!studentCode) { status("Enter your student code.", true); return; }
+  try { localStorage.setItem(STORAGE_KEY, studentCode); localStorage.setItem(LEVEL_KEY, level); } catch (_) {}
+  busy = true;
+  $("start").disabled = true;
+  status("Preparing your questions. A new set can take a minute.");
+  try {
+    begin(await api("/grammar/start", { studentCode, level, topics, count }), studentCode);
+  } catch (error) {
+    status(error.message || "Couldn't start practice. Try again.", true);
+  } finally {
+    busy = false;
+    $("start").disabled = false;
+  }
+});
+$("previous").addEventListener("click", () => { if (!busy) { currentIndex--; showQuestion(); } });
+$("next").addEventListener("click", () => { if (!busy) { currentIndex++; showQuestion(); } });
+$("submit").addEventListener("click", async () => {
+  if (busy || !active) return;
+  busy = true;
+  $("submit").disabled = true;
+  $("previous").disabled = true;
+  $("choices").querySelectorAll("input").forEach((input) => { input.disabled = true; });
+  status("Checking your answers…");
+  try {
+    const { studentCode, attemptId } = active;
+    const result = await api("/grammar/submit", { studentCode, attemptId, answers });
+    status();
+    showResult(result);
+  } catch (error) {
+    status(error.message || "Couldn't check your answers. Try again.", true);
+  } finally {
+    busy = false;
+    $("submit").disabled = false;
+    $("previous").disabled = currentIndex === 0;
+    $("choices").querySelectorAll("input").forEach((input) => { input.disabled = false; });
+  }
+});
+$("again").addEventListener("click", () => {
+  active = null;
+  $("results").hidden = true;
+  $("setup").hidden = false;
+  showLastSetButton();
+  $("start").focus();
+});
+loadTopics();
+</script>
+</body>
+</html>

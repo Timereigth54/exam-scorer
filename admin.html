@@ -137,8 +137,9 @@
   .bank-why b{display:block;font-size:.65rem;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);margin-bottom:.15rem;}
   .bank-why.missing{border-left-color:var(--warn);color:var(--warn);font-style:italic;}
 </style>
+<link rel="stylesheet" href="ui.css">
 </head>
-<body>
+<body class="exam-ui roster-page">
 <div class="shell">
 
   <div id="gate" class="card">
@@ -183,10 +184,12 @@
     </div>
 
     <div class="card">
+      <div class="roster-scroll" role="region" aria-label="Student roster" tabindex="0">
       <table id="rosterTable">
         <thead><tr><th>Name</th><th>Code</th><th>Cohort</th><th>Writing quota</th><th>Speaking answers</th><th>Audio (sec)</th><th>Speaking access</th><th>Last activity</th></tr></thead>
         <tbody id="rosterBody"></tbody>
       </table>
+      </div>
     </div>
 
     <div class="card history" id="historyCard">
@@ -363,12 +366,13 @@ async function loadRoster() {
       const writingCount = s.writing_count ?? s.submission_count ?? 0;
       const overQuota = writingCount >= limit;
       const audioUsed = s.speaking_seconds_used ?? 0;
-      const overAudio = audioUsed >= secondsLimit;
+      const studentSecondsLimit = s.speaking_seconds_limit ?? secondsLimit;
+      const overAudio = audioUsed >= studentSecondsLimit;
       // Graded answers are what's actually sold now; seconds are the abuse guard behind
       // them. Both are shown because a student stuck on either needs a different fix.
       const attemptsUsed = s.speaking_attempts_used ?? 0;
       const attemptsLimit = s.speaking_attempts_limit ?? 0;
-      const outOfAttempts = attemptsLimit > 0 && attemptsUsed >= attemptsLimit;
+      const outOfAttempts = s.speaking_active && attemptsUsed >= attemptsLimit;
       const speak = describeSpeaking(s);
       // Revoking clears the flag but keeps the dates, so this line has to read
       // correctly for a revoked student too — hence "last granted", not "granted".
@@ -376,15 +380,15 @@ async function loadRoster() {
         ? `last granted by ${escapeHtml(s.speaking_granted_by)} on ${new Date(s.speaking_granted_at).toLocaleDateString()}`
         : "";
 
-      tr.innerHTML = `<td>${escapeHtml(s.name)}</td><td><span class="code">${escapeHtml(s.code)}</span></td><td>${escapeHtml(s.cohort || "—")}</td>
+      tr.innerHTML = `<td><button type="button" class="student-history-link" aria-label="View history for ${escapeHtml(s.name)}">${escapeHtml(s.name)}</button></td><td><span class="code">${escapeHtml(s.code)}</span></td><td>${escapeHtml(s.cohort || "—")}</td>
         <td${overQuota ? ' style="color:var(--warn);font-weight:600"' : ""} title="${escapeHtml(String(s.submission_count))} submissions in total, including speaking">${escapeHtml(String(writingCount))}/${escapeHtml(String(limit))}
           <button type="button" class="row-btn add-attempts-btn">+5</button>
           <button type="button" class="row-btn set-limit-btn" data-limit="${escapeHtml(String(limit))}">set…</button>
         </td>
         <td${outOfAttempts ? ' style="color:var(--warn);font-weight:600"' : ""}>${escapeHtml(String(attemptsUsed))}/${escapeHtml(String(attemptsLimit))}
-          <button type="button" class="row-btn add-answers-btn">+10</button>
+          <button type="button" class="row-btn add-answers-btn"${s.speaking_active ? "" : ' disabled title="Grant speaking access first"'}>+10</button>
         </td>
-        <td${overAudio ? ' style="color:var(--warn);font-weight:600"' : ""}>${escapeHtml(String(audioUsed))}/${escapeHtml(String(secondsLimit))}
+        <td${overAudio ? ' style="color:var(--warn);font-weight:600"' : ""}>${escapeHtml(String(audioUsed))}/${escapeHtml(String(studentSecondsLimit))}
           <button type="button" class="row-btn reset-audio-btn">reset</button>
         </td>
         <td>
@@ -396,7 +400,7 @@ async function loadRoster() {
                 <option value="1">1 month</option>
                 <option value="3">3 months</option>
                 <option value="6">6 months</option>
-                <option value="lifetime">Lifetime</option>
+                <option value="lifetime"${s.speaking_active && !s.speaking_expires_at ? " selected" : ""}>Lifetime</option>
                 <option value="custom">Custom date…</option>
               </select>
               <button type="button" class="grant-btn">${s.speaking_active ? "Extend" : "Grant"}</button>
@@ -408,9 +412,9 @@ async function loadRoster() {
 
       tr.addEventListener("click", () => loadHistory(s.code, s.name));
 
-      // Controls live inside a row whose click opens the history panel, so every one
-      // of them has to stop propagation or acting on a student also navigates away.
-      tr.querySelectorAll("button, select").forEach(el => el.addEventListener("click", (e) => e.stopPropagation()));
+      // The student's name button shares the row's history action. Quota and
+      // access controls keep their own actions.
+      tr.querySelectorAll("button:not(.student-history-link), select").forEach(el => el.addEventListener("click", (e) => e.stopPropagation()));
 
       tr.querySelector(".reset-audio-btn").addEventListener("click", async () => {
         if (!confirm(`Reset ${s.name}'s used audio seconds AND graded answers back to 0?`)) return;
@@ -438,8 +442,11 @@ async function loadRoster() {
         } else if (choice === "custom") {
           const input = prompt(`Speaking access for ${s.name} should expire on (YYYY-MM-DD):`, "");
           if (input === null) return;
-          const when = new Date(input.trim());
-          if (isNaN(when.getTime())) { alert("That isn't a date I can read. Use YYYY-MM-DD."); return; }
+          const date = input.trim();
+          const when = new Date(`${date}T00:00:00Z`);
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(when.getTime()) || when.toISOString().slice(0, 10) !== date || when.getTime() <= Date.now()) {
+            alert("Enter a future date in YYYY-MM-DD format."); return;
+          }
           payload = { expiresAt: when.toISOString() };
         } else {
           payload = { months: parseInt(choice, 10) };
@@ -461,8 +468,8 @@ async function loadRoster() {
         const current = e.currentTarget.dataset.limit;
         const input = prompt(`Set ${s.name}'s total attempt quota to:`, current);
         if (input === null) return;
-        const taskLimit = parseInt(input, 10);
-        if (isNaN(taskLimit) || taskLimit < 0) { alert("Enter a whole number of 0 or more."); return; }
+        const taskLimit = Number(input.trim());
+        if (!/^\d+$/.test(input.trim()) || !Number.isSafeInteger(taskLimit) || taskLimit > 100000) { alert("Enter a whole number from 0 to 100,000."); return; }
         if (await adminPost(`/admin/students/${encodeURIComponent(s.code)}/quota`, { taskLimit })) loadRoster();
       });
 
@@ -473,11 +480,15 @@ async function loadRoster() {
   }
 }
 
+let historyVersion = 0;
 async function loadHistory(code, name) {
+  const version = ++historyVersion;
   try {
     const res = await fetch(`${BACKEND_URL}/admin/students/${encodeURIComponent(code)}`, { headers: authHeaders() });
+    if (version !== historyVersion) return;
     if (!res.ok) { alert(`Couldn't load history (server returned ${res.status}).`); return; }
     const data = await res.json();
+    if (version !== historyVersion) return;
     document.getElementById("historyTitle").textContent = `${name} — ${code}`;
     renderHistoryProgress(data.submissions || []);
     renderHistoryList(data.submissions || []);
@@ -485,7 +496,7 @@ async function loadHistory(code, name) {
     document.getElementById("historyCard").classList.add("visible");
     document.getElementById("historyCard").scrollIntoView({ behavior: "smooth" });
   } catch (e) {
-    alert("Couldn't reach the server to load history: " + e.message);
+    if (version === historyVersion) alert("Couldn't reach the server to load history: " + e.message);
   }
 }
 
@@ -639,6 +650,8 @@ document.getElementById("addBtn").addEventListener("click", async () => {
 // has checked.
 let bankStatus = "draft";
 let bankBusy = false;
+let bankGroupsVersion = 0;
+let bankQueueVersion = 0;
 
 const BANK_SKILL_LABEL = { reading: "Reading", listening: "Listening" };
 
@@ -657,12 +670,14 @@ async function adminGet(path) {
 }
 
 async function loadBankGroups() {
+  const version = ++bankGroupsVersion;
   const exam = bankQs("bankExam").value;
   const skill = bankQs("bankSkill").value;
   const host = bankQs("bankGroups");
   host.innerHTML = '<div class="bank-busy">Loading…</div>';
 
   const data = await adminGet(`/admin/bank/groups?exam=${encodeURIComponent(exam)}&skill=${encodeURIComponent(skill)}`);
+  if (version !== bankGroupsVersion) return;
   if (!data) { host.innerHTML = '<div class="bank-empty">Could not load the section.</div>'; return; }
 
   host.innerHTML = "";
@@ -756,9 +771,11 @@ function syncBankTabs() {
 }
 
 async function loadBankQueue() {
+  const version = ++bankQueueVersion;
   const host = bankQs("bankQueue");
   host.innerHTML = '<div class="bank-busy">Loading…</div>';
   const data = await adminGet(`/admin/bank?status=${encodeURIComponent(bankStatus)}`);
+  if (version !== bankQueueVersion) return;
   if (!data) { host.innerHTML = '<div class="bank-empty">Could not load the bank.</div>'; return; }
 
   host.innerHTML = "";
