@@ -219,7 +219,13 @@ function showResult(result) {
     choice.textContent = "Your answer: " + (question.options[item.selected] ?? "—") + " · Correct answer: " + question.options[item.answer];
     const explanation = document.createElement("p");
     explanation.textContent = item.explanation;
-    line.append(heading, mark, choice, explanation);
+    line.append(heading, mark, choice);
+    if (item.note) {
+      const note = document.createElement("p");
+      note.textContent = "Why not “" + question.options[item.selected] + "”? " + item.note;
+      line.append(note);
+    }
+    line.append(explanation);
     return line;
   }));
   $("score").focus();
